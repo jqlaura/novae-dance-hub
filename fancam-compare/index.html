@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <!-- artifact:start -->
-<title>Fancam Compare · Novae Dance Hub</title>
+<title>Novae Dance Hub</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23f08cc8'/%3E%3Cstop offset='.5' stop-color='%23b49cf2'/%3E%3Cstop offset='1' stop-color='%237cc4ff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='22' fill='%2316141f'/%3E%3Cpath transform='translate(14 14) scale(.72)' d='M50 0C54 38 62 46 100 50C62 54 54 62 50 100C46 62 38 54 0 50C38 46 46 38 50 0Z' fill='url(%23g)'/%3E%3C/svg%3E">
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -151,6 +151,8 @@ details.adjust summary { cursor: pointer; padding: 13px 0; font-weight: 600; }
 .result video { width: 100%; max-width: 100%; border-radius: 18px; background: #000; }
 .submit { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
 .submit h3 { margin: 0; font-size: 17px; font-weight: 700; }
+.submitform { display: flex; flex-direction: column; gap: 10px; }
+.submitform[hidden], #finalNote[hidden] { display: none; }
 .note { font-size: 13.5px; color: var(--muted); margin: 0; }
 canvas#rec { display: none; }
 </style>
@@ -179,11 +181,11 @@ canvas#rec { display: none; }
       <circle cx="206" cy="66" r="1.6" fill="#b49cf2"/><circle cx="104" cy="16" r="1.3" fill="#7cc4ff"/>
     </svg>
     <p class="eyebrow">EDS Junior · NOVAE</p>
-    <h1>Fancam Compare</h1>
-    <p class="lede">Put your practice video next to your member's fancam, matched to the music. Everything runs on your phone.</p>
+    <h1>Novae Dance Hub</h1>
+    <p class="lede">Put your practice video next to your member's fancam, matched to the music.</p>
   </header>
 
-  <section class="step" id="step1">
+  <section class="step" id="step1" hidden>
     <h2><span class="n">1</span>Choose your assignment</h2>
     <select id="assignment" aria-label="Assignment"><option value="">Select an assignment…</option></select>
     <p class="mirror-badge"><span aria-hidden="true">⇆</span> All member videos are already mirrored</p>
@@ -191,9 +193,10 @@ canvas#rec { display: none; }
   </section>
 
   <section class="step locked" id="step2">
-    <h2><span class="n">2</span>Upload your practice video</h2>
+    <h2><span class="n">1</span>Upload your practice video</h2>
     <label class="filebtn">Choose video<input id="fileP" type="file" accept="video/*"></label>
     <span class="filemeta" id="metaP">No video yet</span>
+    <p class="mirror-badge"><span aria-hidden="true">⇆</span> Your video will be mirrored (flipped left–right), like the member videos, for easier comparison and review.</p>
     <button class="link" id="sampleOwn" type="button" hidden>Use a sample practice video</button>
     <div class="framer" id="framer" hidden>
       <div class="frame" id="frame">
@@ -209,7 +212,7 @@ canvas#rec { display: none; }
     </div>
   </section>
 
-  <section class="step locked" id="step3">
+  <section class="step locked" id="step3" hidden>
     <h2><span class="n">3</span>Check if your video is mirrored</h2>
     <p class="hint">Find a moment where you raise your right hand. If it's on the right side of the screen, your video is mirrored.</p>
     <div class="choices" id="mirrorChoice">
@@ -220,13 +223,14 @@ canvas#rec { display: none; }
   </section>
 
   <section class="step locked" id="step4">
-    <h2><span class="n">4</span>Pick your member</h2>
+    <h2><span class="n">2</span>Pick your member</h2>
     <div class="members" id="members"></div>
     <p class="hint" id="memberHint">Pick the member you were assigned.</p>
+    <p class="hint">Member videos are mirrored too.</p>
   </section>
 
   <section class="step locked" id="step5">
-    <h2><span class="n">5</span>Pick a start time</h2>
+    <h2><span class="n">3</span>Pick a start time</h2>
     <div class="startpick">
       <div class="thumb mirror" id="startThumb"><video id="startVid" muted playsinline preload="auto"></video></div>
       <div class="startctl">
@@ -242,24 +246,24 @@ canvas#rec { display: none; }
   </section>
 
   <section class="step locked" id="step6">
-    <h2><span class="n">6</span>Preview, then create your video</h2>
+    <h2><span class="n">4</span>Generate your comparison video</h2>
     <div class="status" id="status" role="status" aria-live="polite">
       <span class="dot"></span>
       <div><b id="statusMain">Waiting for your video and member</b><small id="statusSub">We match the two videos by the music.</small></div>
     </div>
     <button class="link" id="nextCand" type="button" hidden>Try another match</button>
 
-    <div class="stage lr" id="stage">
+    <div class="stage lr" id="stage" hidden>
       <div class="pane p" id="paneP"><video id="vidP" playsinline muted preload="auto"></video><span class="label">You</span></div>
       <div class="pane f" id="paneF"><video id="vidF" playsinline muted preload="auto"></video><span class="label" id="labelF">Member</span></div>
     </div>
-    <div class="transport">
+    <div class="transport" hidden>
       <button class="play" id="playBtn" type="button" aria-label="Play" disabled>▶</button>
       <input id="scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="Position" disabled>
       <span class="time num" id="timeLbl">0:00 / 0:00</span>
     </div>
 
-    <details class="adjust">
+    <details class="adjust" hidden>
       <summary>Adjust</summary>
       <div class="row">
         <span class="k">Fine-tune the timing<small>If you move before the member, tap +. If you're late, tap −.</small></span>
@@ -283,22 +287,30 @@ canvas#rec { display: none; }
       </div>
     </details>
 
-    <button class="btn" id="exportBtn" type="button" disabled>Create comparison video</button>
+    <button class="btn" id="exportBtn" type="button" disabled>Generate comparison video</button>
     <div id="exporting" hidden>
       <div class="progress"><i id="bar"></i></div>
-      <p class="note">Recording in real time. Keep the screen on and stay on this page.</p>
+      <p class="note">Putting your video together frame by frame. Keep this page open.</p>
     </div>
     <div class="result" id="result" hidden>
       <video id="outVid" controls playsinline></video>
+      <p class="hint" id="reviewHint">Watch it closely next to your member. Look for moves, angles and timing you want to fix.</p>
       <button class="btn dark" id="saveBtn" type="button">Download video</button>
       <p class="note" id="saveNote"></p>
       <div class="submit">
-        <h3>Submit your assignment</h3>
+        <h3>Are you happy with this homework? Is this your final submission?</h3>
+        <div class="choices" id="finalChoice">
+          <button class="choice" type="button" data-v="yes" aria-pressed="false">Yes, I'm doing my best!</button>
+          <button class="choice" type="button" data-v="no" aria-pressed="false">No, I'll practice more and resubmit</button>
+        </div>
+        <p class="notice" id="finalNote" hidden></p>
+        <div class="submitform" id="submitForm" hidden>
         <input id="kidName" type="text" placeholder="Your name" autocomplete="name" aria-label="Your name">
         <input id="teamCode" type="text" placeholder="Team code (ask your coach)" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Team code">
         <button class="btn" id="submitBtn" type="button">Submit</button>
         <div class="progress" id="upProg" hidden><i id="upBar"></i></div>
         <p class="note" id="submitNote" aria-live="polite"></p>
+        </div>
       </div>
     </div>
   </section>
@@ -318,7 +330,7 @@ const S = {
   audio: { p: null, f: null }, env: { p: null, f: null }, ownError: false,
   d: 0,             // member time = practice time + d
   aligned: false, cand: null, candIdx: 0, lastAlign: null,
-  crop: { z: 1, x: 0, y: 0 }, mirror: false, mirrorAnswered: false, mirrorF: true,
+  crop: { z: 1, x: 0, y: 0 }, mirror: true, mirrorAnswered: true, mirrorF: true,
   startAt: 0, layout: 'lr', swap: false, audioFrom: 'f',
   playing: false, T: 0, L: 0, t0: 0, src: null, exporting: false,
   outBlob: null, outExt: 'mp4', cfg: {}, submitting: false, submitted: false,
@@ -588,14 +600,16 @@ async function loadAssignments() {
     return;
   }
   for (const a of S.assignments) { const o = document.createElement('option'); o.value = a.id; o.textContent = a.title; sel.append(o); }
+  const def = S.cfg.defaultAssignment || (S.assignments.find((a) => !a.demo) || {}).id;   // no picker: one dance at a time
+  if (def) { sel.value = def; chooseAssignment(def, true); }
 }
-function chooseAssignment(id) {
+function chooseAssignment(id, quiet) {
   stopPlayback();
   S.assign = S.assignments.find((a) => a.id === id) || null;
   S.member = null; resetMember();
   $('sampleOwn').hidden = !(S.assign && S.assign.demo);
   renderMembers(); refreshSteps();
-  if (S.assign) scrollToStep(!S.file.p ? 2 : !S.mirrorAnswered ? 3 : 4);
+  if (S.assign && !quiet) scrollToStep(!S.file.p ? 2 : 4);
 }
 function renderMembers() {
   const box = $('members'); box.textContent = '';
@@ -616,7 +630,7 @@ function renderMembers() {
 // ---------- 2. your video + framing ----------
 async function loadOwn(file) {
   stopPlayback();
-  S.aligned = false; S.env.p = null; S.audio.p = null; S.ownError = false; $('result').hidden = true;
+  S.aligned = false; S.env.p = null; S.audio.p = null; S.ownError = false; $('result').hidden = true; $('exportBtn').hidden = false;
   if (S.url.p) URL.revokeObjectURL(S.url.p);
   S.file.p = file; S.url.p = URL.createObjectURL(file);
   vid.p.src = S.url.p;
@@ -644,7 +658,7 @@ const waitMeta = (v) => v.readyState >= 1 ? Promise.resolve() : new Promise((r) 
 
 function applyTransforms() {
   const c = S.crop, t = `translate(${(c.x * 100).toFixed(2)}%, ${(c.y * 100).toFixed(2)}%) scale(${c.z})`;
-  $('frameVid').style.transform = t;
+  $('frameVid').style.transform = (S.mirror ? 'scaleX(-1) ' : '') + t;
   vid.p.style.transform = (S.mirror ? 'scaleX(-1) ' : '') + t;
   vid.f.style.transform = S.mirrorF ? 'scaleX(-1)' : '';
   $('startThumb').classList.toggle('mirror', S.mirrorF);
@@ -656,14 +670,14 @@ const clampPan = (v) => Math.max(-0.5 * S.crop.z, Math.min(0.5 * S.crop.z, v));
   fr.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, cx: S.crop.x, cy: S.crop.y }; fr.setPointerCapture(e.pointerId); fr.style.cursor = 'grabbing'; });
   fr.addEventListener('pointermove', (e) => {
     if (!drag) return; const r = fr.getBoundingClientRect();
-    S.crop.x = clampPan(drag.cx + (e.clientX - drag.x) / r.width);
+    S.crop.x = clampPan(drag.cx + (S.mirror ? -1 : 1) * (e.clientX - drag.x) / r.width);
     S.crop.y = clampPan(drag.cy + (e.clientY - drag.y) / r.height);
     applyTransforms();
   });
   for (const ev of ['pointerup', 'pointercancel']) fr.addEventListener(ev, () => { drag = null; fr.style.cursor = ''; });
   fr.addEventListener('keydown', (e) => {
     const k = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key]; if (!k) return;
-    e.preventDefault(); S.crop.x = clampPan(S.crop.x + k[0] * 0.02); S.crop.y = clampPan(S.crop.y + k[1] * 0.02); applyTransforms();
+    e.preventDefault(); S.crop.x = clampPan(S.crop.x + (S.mirror ? -1 : 1) * k[0] * 0.02); S.crop.y = clampPan(S.crop.y + k[1] * 0.02); applyTransforms();
   });
   $('zoom').addEventListener('input', (e) => { S.crop.z = e.target.value / 100; S.crop.x = clampPan(S.crop.x); S.crop.y = clampPan(S.crop.y); applyTransforms(); });
   $('resetCrop').addEventListener('click', () => { S.crop = { z: 1, x: 0, y: 0 }; $('zoom').value = 100; applyTransforms(); });
@@ -683,7 +697,7 @@ function resetMember() {
   S.env.f = null; S.audio.f = null; S.dur.f = 0; S.aligned = false; S.cand = null; S.startAt = 0; S.startTouched = false;
   vid.f.removeAttribute('src'); vid.f.load();
   const sv = $('startVid'); sv.removeAttribute('src'); sv.load();
-  $('nextCand').hidden = true; $('result').hidden = true;
+  $('nextCand').hidden = true; $('result').hidden = true; $('exportBtn').hidden = false;
   $('labelF').textContent = 'Member';
   status('', 'Waiting for your video and member', 'We match the two videos by the music.');
 }
@@ -722,7 +736,7 @@ async function chooseMember(m) {
       const blob = await fetchWithProgress(videoUrl(m.video), (p) => { if (token === S.loadToken) hint.textContent = `Loading ${m.name}'s video… ${Math.round(p * 100)}%`; });
       if (token === S.loadToken) hint.textContent = `Reading ${m.name}'s music…`;
       const { ab } = await decodeVideoAudio(blob);
-      c = S.memberCache[m.video] = { url: URL.createObjectURL(blob), ab, env: onsetEnvelope(await toMono(ab)) };
+      c = S.memberCache[m.video] = { blob, url: URL.createObjectURL(blob), ab, env: onsetEnvelope(await toMono(ab)) };
     }
     if (token !== S.loadToken) return;
     S.audio.f = c.ab; S.env.f = c.env; S.url.f = c.url;
@@ -749,6 +763,7 @@ function setStart(t, byUser) {
   const max = +$('startRange').max || 0;
   S.startAt = Math.max(0, Math.min(max, t));
   if (byUser) { S.startTouched = true; clearTimeout(S.rematchTimer); S.rematchTimer = setTimeout(rematchIfOutside, 500); }
+  if (byUser && !$('result').hidden && !S.submitting) { $('result').hidden = true; $('exportBtn').hidden = false; }   // the old video no longer matches
   $('startRange').value = S.startAt; $('startLbl').textContent = fmt(S.startAt);
   try { $('startVid').currentTime = S.startAt + 0.05; } catch (e) {}
   if (S.aligned) { const was = S.playing; stopPlayback(); recompute(); seekAll(0); if (was) play(); }
@@ -811,8 +826,8 @@ function runAlign() {
 }
 function showAlignStatus(kind, main) {
   const c = coverage(), mine = Math.max(0, -S.d);
-  status(kind, main, `Your video at ${fmt(mine)} = ${S.member ? S.member.name + "'s" : "the member's"} video at ${fmt(c.from)}. Tap ▶ to check. If the moves don't line up, try another match or open Adjust.`);
-  $('nextCand').hidden = !(S.cand && S.cand.length > 1);
+  status(kind, main, `Your video at ${fmt(mine)} = ${S.member ? S.member.name + "'s" : "the member's"} video at ${fmt(c.from)}. Tap Generate comparison video.`);
+  $('nextCand').hidden = true;          // no live preview any more: we build the video exactly
   if (S.cand) $('nextCand').textContent = `Try another match (${S.candIdx + 1}/${S.cand.length})`;
 }
 
@@ -959,16 +974,22 @@ function pickMime() {
 let rec = null, chunks = [], wake = null;
 const cv = $('rec'), g = cv.getContext('2d');
 function canvasSize() { return S.layout === 'lr' ? [1080, 960] : [960, 1080]; }
-function drawPane(k, box) {
-  const v = vid[k], vw = v.videoWidth, vh = v.videoHeight; if (!vw) return;
-  const c = k === 'p' ? S.crop : { z: 1, x: 0, y: 0 }, flip = k === 'p' ? S.mirror : S.mirrorF;
-  const sc = Math.min(box[2] / vw, box[3] / vh) * c.z, dw = vw * sc, dh = vh * sc;
-  g.save();
-  g.beginPath(); g.rect(box[0], box[1], box[2], box[3]); g.clip();
-  g.translate(box[0] + box[2] / 2, box[1] + box[3] / 2);   // same order as the CSS: zoom, move, then mirror
-  if (flip) g.scale(-1, 1);
-  g.drawImage(v, c.x * box[2] - dw / 2, c.y * box[3] - dh / 2, dw, dh);
-  g.restore();
+function drawPane(k, box, src) {      // src: a decoded frame {img, w, h, rot}; none = the <video>
+  const v = vid[k], img = src ? src.img : v, rot = (src && src.rot) || 0;
+  const iw = src ? src.w : v.videoWidth, ih = src ? src.h : v.videoHeight;
+  if (iw) {
+    const vw = rot % 180 ? ih : iw, vh = rot % 180 ? iw : ih;
+    const c = k === 'p' ? S.crop : { z: 1, x: 0, y: 0 }, flip = k === 'p' ? S.mirror : S.mirrorF;
+    const sc = Math.min(box[2] / vw, box[3] / vh) * c.z;
+    g.save();
+    g.beginPath(); g.rect(box[0], box[1], box[2], box[3]); g.clip();
+    g.translate(box[0] + box[2] / 2, box[1] + box[3] / 2);   // same order as the CSS: zoom, move, then mirror
+    if (flip) g.scale(-1, 1);
+    g.translate(c.x * box[2], c.y * box[3]);
+    if (rot) g.rotate(rot * Math.PI / 180);
+    g.drawImage(img, -iw * sc / 2, -ih * sc / 2, iw * sc, ih * sc);
+    g.restore();
+  }
   const label = k === 'p' ? 'You' : (S.member ? S.member.name : 'Member');
   g.font = '700 26px ' + getComputedStyle(document.body).fontFamily;
   const tw = g.measureText(label).width;
@@ -976,15 +997,331 @@ function drawPane(k, box) {
   g.beginPath(); (g.roundRect ? g.roundRect(box[0] + 14, box[1] + 14, tw + 28, 38, 19) : g.rect(box[0] + 14, box[1] + 14, tw + 28, 38)); g.fill();
   g.fillStyle = '#1c1a26'; g.fillText(label, box[0] + 28, box[1] + 43);
 }
-function drawFrame() {
+function drawFrame(srcs) {
   const [W, H] = [cv.width, cv.height];
   g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
   const order = S.swap ? ['f', 'p'] : ['p', 'f'];
-  order.forEach((k, i) => drawPane(k, S.layout === 'lr' ? [i * W / 2, 0, W / 2, H] : [0, i * H / 2, W, H / 2]));
+  order.forEach((k, i) => drawPane(k, S.layout === 'lr' ? [i * W / 2, 0, W / 2, H] : [0, i * H / 2, W, H / 2], srcs && srcs[k]));
   g.fillStyle = '#000';
   if (S.layout === 'lr') g.fillRect(W / 2 - 2, 0, 4, H); else g.fillRect(0, H / 2 - 2, W, 4);
 }
+// ---------- exact export: build the video frame by frame ----------
+// Playing two videos live on a phone lags, so recording the screen is hit-or-miss. Instead we read
+// every frame straight from both files (WebCodecs), draw the side-by-side picture for each output
+// frame at exactly the right time, encode it, and copy the member's music into the MP4 untouched.
+// Speed doesn't matter for accuracy: a slow phone just takes longer.
+const hex2 = (n) => n.toString(16).padStart(2, '0');
+async function readMoov(file) {
+  let moov = null;
+  for (let off = 0; off + 8 <= file.size;) {
+    const h = await readDV(file, off, 16);
+    let size = h.getUint32(0), hdr = 8; const type = fourcc(h, 4);
+    if (!/^[a-z0-9 ]{4}$/i.test(type)) throw new Error('not an MP4/MOV file');
+    if (size === 1) { size = u64(h, 8); hdr = 16; } else if (size === 0) size = file.size - off;
+    if (size < hdr) throw new Error('damaged file');
+    if (type === 'moov') { moov = { off, size }; break; }
+    off += size;
+  }
+  if (!moov) throw new Error('no moov box');
+  const dv = await readDV(file, moov.off, moov.size), root = { start: 8, end: moov.size };
+  const mvhd = kid(dv, root, 'mvhd');
+  const movieScale = mvhd ? dv.getUint32(mvhd.start + (dv.getUint8(mvhd.start) === 1 ? 20 : 12)) : 600;
+  return { dv, root, movieScale };
+}
+function parseTrack(dv, trak, movieScale) {
+  const mdia = kid(dv, trak, 'mdia'); if (!mdia) return null;
+  const hdlr = kid(dv, mdia, 'hdlr'), type = hdlr ? fourcc(dv, hdlr.start + 8) : '';
+  const mdhd = kid(dv, mdia, 'mdhd'), scale = dv.getUint32(mdhd.start + (dv.getUint8(mdhd.start) === 1 ? 20 : 12));
+  const minf = kid(dv, mdia, 'minf'), stbl = minf && kid(dv, minf, 'stbl'); if (!stbl) return null;
+  const stsd = kid(dv, stbl, 'stsd'), entry = kids(dv, stsd.start + 8, stsd.end)[0]; if (!entry) return null;
+  const stsz = kid(dv, stbl, 'stsz'), stsc = kid(dv, stbl, 'stsc'), stco = kid(dv, stbl, 'stco') || kid(dv, stbl, 'co64');
+  const stts = kid(dv, stbl, 'stts'), ctts = kid(dv, stbl, 'ctts'), stss = kid(dv, stbl, 'stss');
+  if (!stsz || !stsc || !stco || !stts) return null;
+  const fixed = dv.getUint32(stsz.start + 4), n = dv.getUint32(stsz.start + 8);
+  const sizes = new Uint32Array(n); for (let i = 0; i < n; i++) sizes[i] = fixed || dv.getUint32(stsz.start + 12 + 4 * i);
+  const nChunks = dv.getUint32(stco.start + 4);
+  const chunkOff = (i) => (stco.type === 'co64' ? u64(dv, stco.start + 8 + 8 * i) : dv.getUint32(stco.start + 8 + 4 * i));
+  const nsc = dv.getUint32(stsc.start + 4), sc = [];
+  for (let i = 0; i < nsc; i++) sc.push([dv.getUint32(stsc.start + 8 + 12 * i), dv.getUint32(stsc.start + 12 + 12 * i)]);
+  const offs = new Float64Array(n);
+  for (let c = 0, si = 0, k = 0; c < nChunks && si < n; c++) {
+    while (k + 1 < sc.length && sc[k + 1][0] <= c + 1) k++;
+    let off = chunkOff(c);
+    for (let j = 0; j < sc[k][1] && si < n; j++, si++) { offs[si] = off; off += sizes[si]; }
+  }
+  const dts = new Float64Array(n);
+  for (let e = 0, i = 0, t = 0, ne = dv.getUint32(stts.start + 4); e < ne; e++) {
+    const cnt = dv.getUint32(stts.start + 8 + 8 * e), dl = dv.getUint32(stts.start + 12 + 8 * e);
+    for (let j = 0; j < cnt && i < n; j++, i++) { dts[i] = t; t += dl; }
+  }
+  const pts = new Float64Array(n);
+  if (ctts) for (let e = 0, i = 0, ne = dv.getUint32(ctts.start + 4); e < ne; e++) {
+    const cnt = dv.getUint32(ctts.start + 8 + 8 * e), o = dv.getInt32(ctts.start + 12 + 8 * e);
+    for (let j = 0; j < cnt && i < n; j++, i++) pts[i] = o;
+  }
+  const key = new Uint8Array(n).fill(stss ? 0 : 1);
+  if (stss) for (let i = 0, ns = dv.getUint32(stss.start + 4); i < ns; i++) key[dv.getUint32(stss.start + 8 + 4 * i) - 1] = 1;
+  // edit list: leading empty edit = delay, first real edit's media_time = skip
+  let pad = 0, mt = 0;
+  const edts = kid(dv, trak, 'edts'), elst = edts && kid(dv, edts, 'elst');
+  if (elst) {
+    const v1 = dv.getUint8(elst.start) === 1, ne = dv.getUint32(elst.start + 4), sz = v1 ? 20 : 12;
+    for (let i = 0; i < ne; i++) {
+      const o = elst.start + 8 + sz * i, dur = v1 ? u64(dv, o) : dv.getUint32(o), m = v1 ? dv.getInt32(o + 12) : dv.getInt32(o + 4);
+      if (m === -1) { pad += dur / movieScale; continue; }
+      mt = m; break;
+    }
+  }
+  for (let i = 0; i < n; i++) pts[i] = (dts[i] + pts[i] - mt) / scale + pad;
+  // display rotation from the track matrix (iPhone videos are often stored sideways)
+  let rot = 0; const tkhd = kid(dv, trak, 'tkhd');
+  if (tkhd) {
+    const m0 = tkhd.start + (dv.getUint8(tkhd.start) === 1 ? 52 : 40);
+    const a = dv.getInt32(m0), b = dv.getInt32(m0 + 4);
+    rot = ((Math.round(Math.atan2(b, a) * 180 / Math.PI / 90) * 90) % 360 + 360) % 360;
+  }
+  return { type, codec: entry.type, entry, scale, n, sizes, offs, pts, key, rot, dv };
+}
+async function openTracks(file) {
+  const { dv, root, movieScale } = await readMoov(file);
+  return kids(dv, root.start, root.end).filter((b) => b.type === 'trak').map((t) => parseTrack(dv, t, movieScale)).filter(Boolean);
+}
+function videoDecoderConfig(t) {
+  const { dv, entry } = t, w = dv.getUint16(entry.start + 24), h = dv.getUint16(entry.start + 26);
+  const sub = kids(dv, entry.start + 78, entry.end);
+  const box = sub.find((b) => b.type === 'avcC' || b.type === 'hvcC'); if (!box) throw new Error('unsupported video (' + t.codec + ')');
+  const d = new Uint8Array(dv.buffer.slice(dv.byteOffset + box.start, dv.byteOffset + box.end));
+  let codec;
+  if (box.type === 'avcC') codec = (t.codec === 'avc3' ? 'avc3.' : 'avc1.') + hex2(d[1]) + hex2(d[2]) + hex2(d[3]);
+  else {
+    let c = ((d[2] << 24) | (d[3] << 16) | (d[4] << 8) | d[5]) >>> 0, r = 0;
+    for (let i = 0; i < 32; i++) { r = ((r << 1) | (c & 1)) >>> 0; c >>>= 1; }
+    const cons = [d[6], d[7], d[8], d[9], d[10], d[11]]; while (cons.length && !cons[cons.length - 1]) cons.pop();
+    codec = (t.codec === 'hev1' ? 'hev1.' : 'hvc1.') + ['', 'A', 'B', 'C'][d[1] >> 6] + (d[1] & 31) + '.' + r.toString(16) + '.' + ((d[1] >> 5) & 1 ? 'H' : 'L') + d[12] + cons.map((x) => '.' + x.toString(16)).join('');
+  }
+  return { codec, description: d, codedWidth: w, codedHeight: h };
+}
+// Hands out "the frame showing at time t" for increasing t, decoding only as far as needed.
+class FrameSource {
+  constructor(file, track) { this.file = file; this.t = track; this.q = []; this.err = null; this.done = false; this.flushing = false; this.wakers = []; }
+  async open(t0) {
+    const cfg = videoDecoderConfig(this.t);
+    const sup = await VideoDecoder.isConfigSupported(cfg).catch(() => ({ supported: false }));
+    if (!sup.supported) throw new Error("this phone can't read the video (" + cfg.codec + ')');
+    this.w = cfg.codedWidth; this.h = cfg.codedHeight;
+    this.dec = new VideoDecoder({
+      output: (f) => { let i = this.q.length; while (i > 0 && this.q[i - 1].timestamp > f.timestamp) i--; this.q.splice(i, 0, f); this.wake(); },
+      error: (e) => { this.err = new Error((this.t.type === 'vide' ? 'reading video' : '') + ' (' + this.cfgCodec + '): ' + (e && e.message)); this.wake(); },
+    });
+    this.cfgCodec = cfg.codec;
+    this.dec.ondequeue = () => this.wake();
+    this.dec.configure(cfg);
+    const { pts, key, n } = this.t;           // start at the last key frame at or before t0
+    let i = 0; for (let j = 0; j < n; j++) if (key[j] && pts[j] <= t0 + 1e-6) i = j;
+    this.i = i;
+  }
+  wake() { const w = this.wakers; this.wakers = []; w.forEach((r) => r()); }
+  wait() { return new Promise((r) => { this.wakers.push(r); setTimeout(r, 50); }); }
+  async feed() {
+    const t = this.t, i = this.i++;
+    const data = new Uint8Array(await this.file.slice(t.offs[i], t.offs[i] + t.sizes[i]).arrayBuffer());
+    if (this.err) throw this.err;
+    this.dec.decode(new EncodedVideoChunk({ type: t.key[i] ? 'key' : 'delta', timestamp: Math.round(t.pts[i] * 1e6), data }));
+  }
+  async frameAt(sec) {
+    const us = sec * 1e6 + 500;
+    for (;;) {
+      if (this.err) throw this.err;
+      while (this.q.length >= 2 && this.q[1].timestamp <= us) this.q.shift().close();
+      if (this.q.length >= 2 || (this.q.length && this.done)) return this.q[0];
+      if (this.done) return null;
+      if (this.i < this.t.n) { if (this.dec.decodeQueueSize < 6) { await this.feed(); continue; } }
+      else if (!this.flushing) { this.flushing = true; this.dec.flush().then(() => { this.done = true; this.wake(); }, (e) => { this.err = e; this.wake(); }); }
+      await this.wait();
+    }
+  }
+  close() { for (const f of this.q) f.close(); this.q = []; try { this.dec && this.dec.state !== 'closed' && this.dec.close(); } catch (e) {} }
+}
+// Backup: same idea with an ordinary <video>: jump to each frame's exact time, wait until it's
+// there, then draw it. Slower, but works for any video the phone can play (e.g. iPhone HDR clips
+// that WebCodecs can't read).
+class ElementSource {
+  constructor(url) { this.url = url; this.rvfcMiss = 0; }
+  async open() {
+    const v = this.v = document.createElement('video');
+    v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = this.url;
+    v.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none';
+    document.body.appendChild(v);
+    if (v.readyState < 1) await onceEv(v, 'loadedmetadata', 15000);
+    try { await v.play(); } catch (e) {}      // iPhone only loads a video for real once it has played
+    v.pause();
+  }
+  async frameAt(sec) {
+    const v = this.v, t = Math.max(0, Math.min(sec, (v.duration || 1e9) - 0.02));
+    if (!this.got || Math.abs(v.currentTime - t) > 0.0005) {
+      for (let tries = 0; tries < 3; tries++) {
+        const pr = onceEv(v, 'seeked', 5000); v.currentTime = t;
+        if (await pr) break;
+      }
+      if (v.requestVideoFrameCallback && this.rvfcMiss < 3) {
+        const ok = await new Promise((r) => { v.requestVideoFrameCallback(() => r(true)); setTimeout(() => r(false), 120); });
+        if (!ok) this.rvfcMiss++;
+      }
+      this.got = true;
+    }
+    return { img: v, w: v.videoWidth, h: v.videoHeight, rot: 0 };
+  }
+  close() { try { this.v.removeAttribute('src'); this.v.load(); this.v.remove(); } catch (e) {} }
+}
+// WebCodecs first (fast); if this phone can't read the file that way, the <video> backup.
+async function openSource(file, url, track, t0, label) {
+  if (track && typeof VideoDecoder === 'function') {
+    const s = new FrameSource(file, track);
+    try {
+      await s.open(t0);
+      if (await s.frameAt(t0)) {
+        let fb = null;
+        return {
+          how: 'webcodecs',
+          async frameAt(t) {
+            if (!fb) {
+              try { const f = await s.frameAt(t); return f && { img: f, w: f.displayWidth, h: f.displayHeight, rot: track.rot }; }
+              catch (e) { console.warn(label + ': switching to backup', e); s.close(); fb = new ElementSource(url); await fb.open(); this.how = 'video (after error)'; }
+            }
+            return fb.frameAt(t);
+          },
+          close() { s.close(); if (fb) fb.close(); },
+        };
+      }
+    } catch (e) { console.warn(label + ': WebCodecs not usable, using backup', e && e.message); }
+    s.close();
+  }
+  const fb = new ElementSource(url); await fb.open();
+  return { how: 'video', frameAt: (t) => fb.frameAt(t), close: () => fb.close() };
+}
+function aacInfo(t) {                   // AudioSpecificConfig + channel count from an mp4a sample entry
+  const { dv, entry } = t; let p = -1;
+  for (let o = entry.start; o + 4 <= entry.end; o++) if (fourcc(dv, o) === 'esds') { p = o + 8; break; }
+  if (p < 0) throw new Error('no esds box');
+  const desc = () => { const tag = dv.getUint8(p++); let len = 0, b; do { b = dv.getUint8(p++); len = (len << 7) | (b & 0x7f); } while (b & 0x80); return { tag, len }; };
+  let d = desc(); if (d.tag !== 3) throw new Error('bad esds box');
+  p += 2; const fl = dv.getUint8(p++); if (fl & 0x80) p += 2; if (fl & 0x40) p += 1 + dv.getUint8(p); if (fl & 0x20) p += 2;
+  d = desc(); if (d.tag !== 4) throw new Error('bad esds box');
+  p += 13; d = desc(); if (d.tag !== 5) throw new Error('missing AAC config');
+  const asc = new Uint8Array(dv.buffer.slice(dv.byteOffset + p, dv.byteOffset + p + d.len));
+  const sfi = ((asc[0] & 7) << 1) | (asc[1] >> 7), rates = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
+  return { asc, channels: (asc[1] >> 3) & 15 || dv.getUint16(entry.start + 16) || 2, rate: t.scale || rates[sfi] };
+}
+// ---- a small MP4 writer (one H.264 track + one AAC track, moov first so it plays right away) ----
+const u8 = (...a) => new Uint8Array(a);
+const be32 = (n) => u8(n >>> 24 & 255, n >>> 16 & 255, n >>> 8 & 255, n & 255), be16 = (n) => u8(n >> 8 & 255, n & 255);
+const ascii = (s) => new Uint8Array([...s].map((c) => c.charCodeAt(0)));
+function cat(parts) { let n = 0; for (const p of parts) n += p.length; const o = new Uint8Array(n); let w = 0; for (const p of parts) { o.set(p, w); w += p.length; } return o; }
+const mbox = (type, ...parts) => { const body = cat(parts); return cat([be32(body.length + 8), ascii(type), body]); };
+const fbox = (type, v, flags, ...parts) => mbox(type, u8(v, flags >> 16 & 255, flags >> 8 & 255, flags & 255), ...parts);
+const zeros = (n) => new Uint8Array(n);
+const MATRIX = cat([be32(0x10000), be32(0), be32(0), be32(0), be32(0x10000), be32(0), be32(0), be32(0), be32(0x40000000)]);
+function writeMP4({ W, H, fps, video, avcC, audio, asc, channels, rate }) {
+  const vDur = video.length * 1000, aDur = audio.length * 1024, ms = Math.round(video.length / fps * 1000);
+  const tables = (sizes) => [fbox('stsc', 0, 0, be32(1), be32(1), be32(sizes.length), be32(1)), fbox('stsz', 0, 0, be32(0), be32(sizes.length), ...sizes.map(be32))];
+  const trak = (id, isV, mdhdScale, dur, stsd, extra, off) => mbox('trak',
+    fbox('tkhd', 0, 3, be32(0), be32(0), be32(id), be32(0), be32(ms), zeros(8), be16(0), be16(0), be16(isV ? 0 : 0x100), be16(0), MATRIX, be32(isV ? W << 16 : 0), be32(isV ? H << 16 : 0)),
+    mbox('mdia',
+      fbox('mdhd', 0, 0, be32(0), be32(0), be32(mdhdScale), be32(dur), be16(0x55c4), be16(0)),
+      fbox('hdlr', 0, 0, be32(0), ascii(isV ? 'vide' : 'soun'), zeros(12), ascii(isV ? 'VideoHandler' : 'SoundHandler'), u8(0)),
+      mbox('minf', isV ? fbox('vmhd', 0, 1, zeros(8)) : fbox('smhd', 0, 0, zeros(4)),
+        mbox('dinf', fbox('dref', 0, 0, be32(1), fbox('url ', 0, 1))),
+        mbox('stbl', stsd, ...extra, fbox('stco', 0, 0, be32(1), be32(off))))));
+  const avc1 = mbox('avc1', zeros(6), be16(1), zeros(16), be16(W), be16(H), be32(0x480000), be32(0x480000), be32(0), be16(1), zeros(32), be16(0x18), be16(0xffff), mbox('avcC', avcC));
+  const dsi = cat([u8(5, asc.length), asc]), dcd = cat([u8(4, 13 + dsi.length, 0x40, 0x15, 0, 0, 0), be32(128000), be32(128000), dsi]);
+  const esd = cat([u8(3, 3 + dcd.length + 3), be16(0), u8(0), dcd, u8(6, 1, 2)]);
+  const mp4a = mbox('mp4a', zeros(6), be16(1), zeros(8), be16(channels), be16(16), be16(0), be16(0), be32((rate & 0xffff) << 16 >>> 0), fbox('esds', 0, 0, esd));
+  const keys = []; video.forEach((s, i) => s.key && keys.push(i + 1));
+  const moov = (vOff, aOff) => mbox('moov',
+    fbox('mvhd', 0, 0, be32(0), be32(0), be32(1000), be32(ms), be32(0x10000), be16(0x100), zeros(10), MATRIX, zeros(24), be32(3)),
+    trak(1, true, fps * 1000, vDur, fbox('stsd', 0, 0, be32(1), avc1), [fbox('stts', 0, 0, be32(1), be32(video.length), be32(1000)), fbox('stss', 0, 0, be32(keys.length), ...keys.map(be32)), ...tables(video.map((s) => s.data.length))], vOff),
+    trak(2, false, rate, aDur, fbox('stsd', 0, 0, be32(1), mp4a), [fbox('stts', 0, 0, be32(1), be32(audio.length), be32(1024)), ...tables(audio.map((a) => a.length))], aOff));
+  const ftyp = mbox('ftyp', ascii('isom'), be32(0x200), ascii('isomiso2avc1mp41'));
+  const vBytes = video.reduce((n, s) => n + s.data.length, 0), aBytes = audio.reduce((n, a) => n + a.length, 0);
+  const head = ftyp.length + moov(0, 0).length + 8;
+  const mdatHdr = cat([be32(8 + vBytes + aBytes), ascii('mdat')]);
+  return new Blob([ftyp, moov(head, head + vBytes), mdatHdr, ...video.map((s) => s.data), ...audio], { type: 'video/mp4' });
+}
+const canExact = () => typeof VideoEncoder === 'function' && typeof VideoFrame === 'function';
+async function pickEncoder(W, H) {
+  for (const codec of ['avc1.640028', 'avc1.4d0028', 'avc1.42e028', 'avc1.42001f']) {
+    const cfg = { codec, width: W, height: H, bitrate: 4_000_000, framerate: 30, avc: { format: 'avc' } };
+    const r = await VideoEncoder.isConfigSupported(cfg).catch(() => null);
+    if (r && r.supported) return cfg;
+  }
+  throw new Error("this phone can't make H.264 video");
+}
+async function exportExact(onProgress) {
+  const FPS = 30;
+  const memberBlob = S.memberCache[S.member.video] && S.memberCache[S.member.video].blob;
+  if (!memberBlob) throw new Error('member video not loaded');
+  const [tp, tf] = await Promise.all([openTracks(S.file.p), openTracks(memberBlob)]);
+  const vp = tp.find((t) => t.type === 'vide'), vf = tf.find((t) => t.type === 'vide');
+  const af = tf.find((t) => t.type === 'soun' && t.codec === 'mp4a');
+  if (!af) throw new Error("member video's sound isn't AAC");
+  const ai = aacInfo(af);
+  // start exactly on one of the member's sound frames, so the copied music lines up to the sample
+  const s = starts(); let a0 = 0; while (a0 < af.n && af.pts[a0] < s.f - 1e-6) a0++;
+  const shift = a0 < af.n ? af.pts[a0] - s.f : 0;
+  const sp = s.p + shift, sf = s.f + shift, L = S.L - shift;
+  const N = Math.max(1, Math.floor(L * FPS));
+  let a1 = a0; while (a1 < af.n && af.pts[a1] < sf + N / FPS - 1e-6) a1++;
+  const audio = [];
+  for (let i = a0; i < a1; i++) audio.push(new Uint8Array(await memberBlob.slice(af.offs[i], af.offs[i] + af.sizes[i]).arrayBuffer()));
+  const src = {};
+  const [W, H] = canvasSize(); cv.width = W; cv.height = H;
+  const video = []; let avcC = null, encErr = null;
+  const enc = new VideoEncoder({
+    output: (chunk, meta) => { const ds = meta && meta.decoderConfig && meta.decoderConfig.description; if (ds) avcC = ds instanceof ArrayBuffer ? new Uint8Array(ds.slice(0)) : new Uint8Array(ds.buffer, ds.byteOffset, ds.byteLength).slice(); const d = new Uint8Array(chunk.byteLength); chunk.copyTo(d); video.push({ data: d, key: chunk.type === 'key' }); },
+    error: (e) => { encErr = e; },
+  });
+  try {
+    src.p = await openSource(S.file.p, S.url.p, vp, sp, 'your video');
+    src.f = await openSource(memberBlob, S.url.f, vf, sf, 'member video');
+    S.exportHow = src.p.how + ' + ' + src.f.how;
+    enc.configure(await pickEncoder(W, H));
+    for (let i = 0; i < N; i++) {
+      if (encErr) throw encErr;
+      const [fp, ff] = await Promise.all([src.p.frameAt(sp + i / FPS), src.f.frameAt(sf + i / FPS)]);
+      drawFrame({ p: fp, f: ff });
+      const frame = new VideoFrame(cv, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
+      enc.encode(frame, { keyFrame: i % (2 * FPS) === 0 }); frame.close();
+      while (enc.encodeQueueSize > 3) await new Promise((r) => setTimeout(r, 5));
+      if (i % 5 === 0) { onProgress(i / N); await new Promise((r) => setTimeout(r, 0)); }
+    }
+    await enc.flush();
+    if (encErr) throw encErr;
+  } finally { src.p && src.p.close(); src.f && src.f.close(); try { enc.state !== 'closed' && enc.close(); } catch (e) {} }
+  if (!avcC) throw new Error('the encoder gave no H.264 setup');
+  onProgress(1);
+  return writeMP4({ W, H, fps: FPS, video, avcC, audio, asc: ai.asc, channels: ai.channels, rate: ai.rate });
+}
+
 async function startExport() {
+  if (S.exporting || !S.aligned) return;
+  if (!canExact()) return startExportLive();
+  stopPlayback(); try { $('frameVid').pause(); } catch (e) {}
+  S.exporting = true; S.T = 0; updateControls();
+  $('exporting').hidden = false; $('result').hidden = true; $('bar').style.width = '0%';
+  status('busy', 'Creating your comparison video…', 'Putting it together frame by frame. Keep this page open.');
+  try { wake = await navigator.wakeLock?.request('screen'); } catch (e) {}
+  try {
+    const blob = await exportExact((p) => { $('bar').style.width = (100 * p).toFixed(1) + '%'; $('statusMain').textContent = `Creating your comparison video… ${Math.round(100 * p)}%`; });
+    S.outExt = 'mp4'; chunks = [blob]; onRecorded();
+  } catch (e) {
+    console.error('export failed:', e && e.name, e && e.message, e && e.stack);
+    S.exporting = false; try { wake?.release(); } catch (er) {} wake = null;
+    $('exporting').hidden = true; updateControls();
+    status('err', "Couldn't create the video", (e && e.message) || String(e));
+  }
+}
+// old way (records live playback): only for browsers without WebCodecs
+async function startExportLive() {
   const mime = pickMime();
   if (!mime || !cv.captureStream) { status('err', "This browser can't create videos", "Open this page in your phone's Safari or Chrome."); return; }
   stopPlayback();
@@ -1031,7 +1368,9 @@ function onRecorded() {
   S.outBlob = new Blob(chunks, { type: chunks[0]?.type || (S.outExt === 'mp4' ? 'video/mp4' : 'video/webm') });
   $('outVid').src = URL.createObjectURL(S.outBlob);
   $('exporting').hidden = true; $('result').hidden = false; $('saveNote').textContent = ''; $('submitNote').textContent = '';
-  S.submitted = false; $('submitBtn').textContent = 'Submit'; $('upProg').hidden = true;
+  S.submitted = false; $('submitBtn').textContent = 'Submit'; $('upProg').hidden = true; $('exportBtn').hidden = true;
+  $('submitForm').hidden = true; $('finalNote').hidden = true; pressSeg('finalChoice', () => false);
+  $('reviewHint').textContent = `Watch it closely next to ${S.member ? S.member.name : 'your member'}. Look for moves, angles and timing you want to fix.`;
   status('ok', 'Your comparison video is ready', (S.outBlob.size / 1048576).toFixed(1) + ' MB. Watch it below, then download or submit it.');
   updateControls();
   $('result').scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
@@ -1067,6 +1406,13 @@ const toBase64 = (blob) => new Promise((res, rej) => {
   fr.onload = () => res(String(fr.result).slice(String(fr.result).indexOf(',') + 1));
   fr.onerror = () => rej(fr.error); fr.readAsDataURL(blob);
 });
+// Submissions go into one Drive folder per week (Sunday–Saturday): HW1, HW2, …
+function weekFolder(now = new Date()) {
+  const w = (S.cfg && S.cfg.weeks) || {}, m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(w.firstSunday || '');
+  if (!m) return (S.assign && S.assign.title) || 'Other';
+  const day0 = Date.UTC(+m[1], +m[2] - 1, +m[3]), today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return (w.prefix || 'HW') + Math.max(1, Math.floor((today - day0) / 864e5 / 7) + 1);
+}
 async function submit() {
   const note = $('submitNote'), name = $('kidName').value.trim(), code = $('teamCode').value.trim();
   if (!S.outBlob || S.submitting || S.submitted) return;
@@ -1078,7 +1424,7 @@ async function submit() {
   S.submitting = true; updateControls();
   $('upProg').hidden = false; bar.style.width = '0%'; note.textContent = 'Starting the upload…';
   try {
-    const st = await callScript({ action: 'start', passcode: code, name, assignment: S.assign && S.assign.title,
+    const st = await callScript({ action: 'start', passcode: code, name, assignment: weekFolder(),
       member: S.member && S.member.name, size: total, mime: blob.type || 'video/' + S.outExt });
     if (!st.ok) { const e = new Error(st.error || 'upload refused'); e.code = st.code; throw e; }
     const step = st.chunk || 8 * 1048576;
@@ -1094,7 +1440,7 @@ async function submit() {
       note.textContent = r.done ? '' : `Uploading… ${Math.round(100 * off / total)}% (keep this page open)`;
     }
     S.submitted = true; $('submitBtn').textContent = 'Submitted ✓';
-    note.textContent = 'Submitted! Your coach has your video.';
+    note.textContent = 'Submitted! Your coach has your video. Great work this week!';
   } catch (e) {
     console.error(e); $('upProg').hidden = true;
     note.textContent = e.code === 'passcode' ? "That team code isn't right. Check it with your coach."
@@ -1104,6 +1450,7 @@ async function submit() {
 
 // ---------- controls ----------
 function updateControls() {
+  $('exportBtn').hidden = !$('result').hidden;
   $('submitBtn').disabled = S.submitting || S.submitted;
   const ready = S.aligned && !S.exporting && !!S.member && S.mirrorAnswered && !S.ownError;
   $('playBtn').disabled = !ready; $('scrub').disabled = !ready; $('exportBtn').disabled = !ready;
@@ -1161,14 +1508,28 @@ $('nextCand').addEventListener('click', () => {
 $('exportBtn').addEventListener('click', startExport);
 $('saveBtn').addEventListener('click', save);
 $('submitBtn').addEventListener('click', submit);
+// "Is this your final submission?" — yes: show the submit form; no: back to practising
+$('finalChoice').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b || S.submitting || S.submitted) return;
+  pressSeg('finalChoice', (x) => x === b);
+  if (b.dataset.v === 'yes') {
+    $('finalNote').hidden = true; $('submitForm').hidden = false;
+    ($('kidName').value ? $('teamCode') : $('kidName')).focus({ preventScroll: true });
+    return;
+  }
+  $('submitForm').hidden = true;
+  const ov = $('outVid'); try { URL.revokeObjectURL(ov.src); } catch (er) {} ov.removeAttribute('src'); ov.load();
+  S.outBlob = null; $('result').hidden = true; updateControls();
+  status('ok', "Love that! Practice the parts you spotted", "When you're ready, record again and upload your new video in step 1.");
+  scrollToStep(2);
+});
 
-window.__dance = S; S._t = { align, decodeVideoAudio, decode, onsetEnvelope, toMono }; // for testing
+window.__dance = S; S._t = { align, decodeVideoAudio, decode, onsetEnvelope, toMono, openTracks, videoDecoderConfig, weekFolder }; // for testing
 try { $('kidName').value = localStorage.getItem('fancam.name') || ''; $('teamCode').value = localStorage.getItem('fancam.code') || ''; } catch (e) {}
 applyTransforms(); refreshSteps(); loadAssignments();
 })();
 </script>
 <!-- artifact:end -->
-<body><p><a href="fancam-compare/">Fancam Compare</a></p>
 <script>
 // Debug recorder: only with ?debug in the address. Records what both videos do, "Copy log" button.
 if (/[?&]debug\b/.test(location.search)) (function () {
@@ -1201,6 +1562,5 @@ if (/[?&]debug\b/.test(location.search)) (function () {
   log('PAGE', location.href, navigator.userAgent);
 })();
 </script>
-</body></html>
 </body>
 </html>

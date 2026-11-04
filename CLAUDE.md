@@ -22,6 +22,9 @@
 - 开始时间（第 5 步，用户 2026-11-04 强调：作业常常只是歌的中间一段）：对齐后滑块自动放到孩子视频在成员直拍里的位置；孩子自己挪开始时间，就只在“包含这个时间”的范围里重新对一次音乐（副歌重复时防止对错）；孩子手动点过 Try another / 微调就不覆盖。重新对的结果必须不弱于全局最好匹配的 60%，否则保持原匹配（a90c799 没有这个保护：孩子把开始时间放到 0:05 时，中段片段会被强行对到 5.46 秒，完全对不上；用户 2026-11-04 实测“完全没对齐”）。状态栏写明“Your video at X = 成员 video at Y”，方便排查。真直拍测试：Himeki 1:35 起 40 秒对 Young → 95.0 秒。
 - **iPhone 播放从 0:00 开始的 bug（用户 2026-11-04 实测，电脑上正常、手机上不行）**：iPhone Safari 视频没播放过之前，跳时间（currentTime = …）会被丢掉或推迟，所以按 ▶ 后两个视频都从头放。修法：`lineUp()`：先静音播放把视频“激活”，暂停，**每次都重新跳**（Safari 会把早先的跳转推迟执行，把视频拉回 0:00），等 `seeked` 并核对位置，再开始播放；导出同样先 `lineUp(0)`。`follow()` 跳转卡住 1.5 秒会重试，跳转时提前量按实测跳转耗时。测试：`ios_run.js` 用脚本模拟“没播放过就丢掉跳转”（旧版重现 −4.84 秒错位，新版正确）；Playwright WebKit 已装（~/Library/Caches/ms-playwright），可以测 Safari 内核。**电脑上测通过不算数，必须用户手机确认。**
 - 用户的真实测试视频：`~/Downloads/Karina-Aijing Intro 2.MOV`（iPhone HEVC 60fps 1080×1920，声音很小），对 Aijing：你的 0:04.84 = Aijing 0:00。不要放进仓库。
+- **第 3 版流程（用户 2026-11-04 定）**：名字 Novae Dance Hub；没有选作业（`defaultAssignment` = NEON，选择框藏起来，测试还能用）；孩子的视频**一律镜像**，上传步骤里有一行说明（不再问是否镜像）；步骤：1 上传 → 2 选成员 → 3 开始时间 → 4 Generate comparison video。**没有实时预览/Adjust/Try another**（手机上同时播两个视频会卡、会对不齐，用户明确不要）。生成后只有：看视频、Download、“Are you happy with this homework? Is this your final submission?” → “Yes, I'm doing my best!”（出现名字+口令+Submit）/ “No, I'll practice more and resubmit”（删掉视频，回到第 1 步，鼓励的话）。目的是让孩子认真看对比视频找问题。
+- **生成方式：逐帧合成**（`exportExact`）：WebCodecs 解码两边每一帧（iPhone 10-bit HDR HEVC 在 Safari 内核里解不了时，自动改用 `<video>` 逐帧跳转 `ElementSource`），按准确时间画到 canvas，VideoEncoder 编 H.264，成员的 AAC 音轨原样拷进自己写的 MP4（`writeMP4`）。从成员的一个 AAC 帧开始，画面跟着挪，声音精确到采样。没有 VideoEncoder 的浏览器才用旧的录屏方式。用户的 Aijing 视频验证：Chrome 和 WebKit 输出里孩子画面、成员画面、音乐误差都在 1 帧以内（`check_sync.sh` 用动作能量互相关测）。
+- **每周文件夹**：提交存 `Fancam Submissions/HW<n>/`，周日开始新的一周，`weeks.firstSunday` = 2026-10-25 是 HW1（10/25–10/31），11/1–11/7 是 HW2。周数在网页里按孩子手机的日期算，作为 `assignment` 传给 Apps Script（脚本不用改）。
 - 测试方法见 README。合成示例的正确答案：相差 5.5 秒。
 
 ## 规则
