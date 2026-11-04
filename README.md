@@ -4,18 +4,24 @@
 
 ## 直拍对比 `fancam-compare/`
 
-孩子用手机选“自己的练习视频”和“分配到的成员直拍”，网页按音乐自动对齐，生成一个左右（或上下）并排的对比视频，保存到手机。
+孩子在手机上打开网页（英文界面），按 6 步做出“自己的练习视频 + 分配成员的直拍”左右对比视频，音乐自动对齐。
 
 - 在线版本（Claude Artifact，目前只有自己能打开）：https://claude.ai/artifact/VteLrSBvY2cCiXXc5VPPHC
-- 全部在手机浏览器里处理，**视频不会上传到任何地方**，也没有服务器。
-- 单个文件：[fancam-compare/index.html](fancam-compare/index.html)。放到任何静态网站（如 GitHub Pages）上就能用。
+- 页面：[fancam-compare/index.html](fancam-compare/index.html)；作业和成员视频列表：[fancam-compare/assignments.json](fancam-compare/assignments.json)
+- 处理都在手机浏览器里完成；视频只有在“Submit”时才会上传（上传还没接好）。
 
-### 功能
+### 孩子的流程
 
-- 自动对齐：两个视频用同一首歌、开始时间不同也能对上（误差约 1 帧以内）。
-- 自动对错时：“换一个对齐点”在前 3 个候选之间切换；±1 帧 / ±0.1 秒手动微调。
-- 练习视频镜像（照镜子练的翻过来）、左右 / 上下 / 互换、选用哪个视频的声音。
-- 生成视频：边播边录（3 分钟视频要录 3 分钟），iPhone 上输出 mp4。
+1. **Choose your assignment**：下拉选作业。页面强调“All member videos are already mirrored”。
+2. **Upload your practice video**：选视频后可以拖动、缩放，有居中辅助线。
+3. **Is your video mirrored?**：选 No 就自动镜像，并提示“we mirrored your video”。
+4. **Choose your member**：成员视频从 `assignments.json` 里的地址加载（`mirror: true` = 显示时左右翻转，所以放原版直拍就行）。
+5. **Where should it start?**：按成员视频的时间选开始点，带缩略图预览。
+6. **Check it, then create the video**：预览、调整（换对齐点、逐帧微调、镜像开关、左右/上下/互换、用谁的声音），生成后 **Download video** 或 **Submit**。
+
+### 加一个作业 / 成员视频
+
+在 `assignments.json` 里加一项：`{ "id", "title", "members": [{ "name", "video": "地址", "mirror": true }] }`。`video` 为 `null` 的成员显示“video not added yet”。`demo: true` 的作业会显示“Use a sample practice video”。
 
 ### 原理
 
@@ -35,19 +41,13 @@
 
 ```bash
 cd fancam-compare
-python3 tools/make_samples.py samples          # 重新生成两段假视频（可选；已经在 samples/ 里）
+python3 tools/make_samples.py samples          # 重新生成示例视频（可选；已经在 samples/ 里）
 python3 -m http.server 8765 --bind 127.0.0.1 & # 起本地服务
-node tests/run.js /tmp/out                     # 端到端：载入示例 → 对齐 → 导出 → 下载
-node tests/preview.js                          # 预览时两边的时间差
-cd /tmp/out && python3 <repo>/fancam-compare/tests/check.py   # 导出视频：左右帧差、声画差
+node tests/flow.js /tmp/out 8765               # 端到端：作业 → 示例练习视频 → 镜像 → Member B → 从 0:03 开始 → 生成 → 下载
+python3 tests/check.py /tmp/out/<下载的文件>.mp4   # 导出视频：左右帧差、声画差
+python3 tools/build_artifact.py index.html /tmp/artifact/index.html   # 生成 Artifact 用的片段
 ```
 
-`tests/demux.js` 要先准备 `tests/tmp/IMG_practice.MOV`、`tests/tmp/fancam_moov_end.mp4`：
+`tests/demux.js` 比较“自己拆音轨”和“浏览器整体解码”的时间差，要先准备 `tests/tmp/IMG_practice.MOV`、`tests/tmp/fancam_moov_end.mp4`（用 ffmpeg `-c copy` 从示例转出来）。
 
-```bash
-mkdir -p tests/tmp
-ffmpeg -i samples/practice.mp4 -c copy -f mov tests/tmp/IMG_practice.MOV
-ffmpeg -i samples/fancam.mp4 -c copy tests/tmp/fancam_moov_end.mp4
-```
-
-需要 Node + Playwright（Chromium）、Python 3 + numpy + Pillow、ffmpeg。示例视频里的假“歌”：120 BPM，练习视频 1.5 秒后才开始放歌，直拍从歌的第 4 秒开始，所以正确答案是相差 5.5 秒。
+需要 Node + Playwright（Chromium）、Python 3 + numpy + Pillow、ffmpeg。示例的正确答案：练习视频对 Member A / B / C 分别差 −5.5 / −3.5 / −0.5 秒。

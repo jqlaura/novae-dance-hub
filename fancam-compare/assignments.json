@@ -1,0 +1,30 @@
+{
+  "note": "One entry per assignment. member.video is a path or URL to that member's fancam. mirror: true flips it left-right when shown, so the coach can upload the original fancam.",
+  "assignments": [
+    {
+      "id": "a2o-lite-neon",
+      "title": "A2O LITE — NEON",
+      "members": [
+        { "name": "Young", "video": null, "mirror": true },
+        { "name": "Himeki", "video": null, "mirror": true },
+        { "name": "Vora", "video": null, "mirror": true },
+        { "name": "Xili", "video": null, "mirror": true },
+        { "name": "Rada", "video": null, "mirror": true },
+        { "name": "Merci", "video": null, "mirror": true },
+        { "name": "Ayune", "video": null, "mirror": true },
+        { "name": "Oa", "video": null, "mirror": true },
+        { "name": "Aijing", "video": null, "mirror": true }
+      ]
+    },
+    {
+      "id": "demo",
+      "title": "Demo — sample videos",
+      "demo": true,
+      "members": [
+        { "name": "Member A", "video": "samples/member_a.mp4", "mirror": true },
+        { "name": "Member B", "video": "samples/member_b.mp4", "mirror": true },
+        { "name": "Member C", "video": "samples/member_c.mp4", "mirror": true }
+      ]
+    }
+  ]
+}

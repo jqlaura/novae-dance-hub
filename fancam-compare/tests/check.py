@@ -1,6 +1,7 @@
-import numpy as np, collections, subprocess
+import numpy as np, collections, subprocess, sys
+src = sys.argv[1] if len(sys.argv) > 1 else 'out_download'
 W,H=1080,960
-subprocess.run("ffmpeg -v error -y -i out_download -vf fps=30,scale=1080:960 -f rawvideo -pix_fmt gray frames.raw && ffmpeg -v error -y -i out_download -ac 1 -ar 8000 -f s16le a.raw",shell=True,check=True)
+subprocess.run(f"ffmpeg -v error -y -i '{src}' -vf fps=30,scale=1080:960 -f rawvideo -pix_fmt gray frames.raw && ffmpeg -v error -y -i '{src}' -ac 1 -ar 8000 -f s16le a.raw",shell=True,check=True)
 a=np.fromfile('frames.raw',dtype=np.uint8); n=len(a)//(W*H); a=a[:n*W*H].reshape(n,H,W)
 L=a[:,8:14,250:290].mean(axis=(1,2)); R=a[:,8:14,790:830].mean(axis=(1,2))
 on=lambda x: np.where((x[1:]>150)&(x[:-1]<=150))[0]+1

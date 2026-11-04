@@ -1,9 +1,8 @@
-"""Make two fake dance videos that share one song, starting at different points.
+"""Make fake dance videos that share one song, each starting at a different point.
 
-练习.mp4  : phone in a practice room. Video t=0 is 1.5 s before the song starts.
-直拍.mp4  : fancam. Video t=0 is already 4.0 s into the song, with crowd noise.
-So the same musical moment is at practice time t and fancam time t - 5.5.
-A white bar flashes on every drum hit in both videos, so sync is easy to check by eye.
+practice.mp4 : phone in a practice room. Video t=0 is 1.5 s before the song starts.
+member_*.mp4 : fake fancams with crowd noise, starting at different points of the song.
+A white bar flashes on every drum hit in every video, so sync is easy to check by eye.
 """
 import subprocess, sys, wave
 from pathlib import Path
@@ -85,13 +84,18 @@ p = lowpass(p, 0.35) * 0.7       # phone mic, speaker across the room
 p += 0.02 * rng.standard_normal(len(p))
 write_wav(OUT / "practice.wav", p)
 
-# ---------- fancam: crowd noise that swells ----------
-F_LEN, F_START = 22.0, 4.0
-f = song_at(F_START, F_LEN)
-crowd = lowpass(rng.standard_normal(len(f)), 0.25)
-swell = 0.5 + 0.5 * np.sin(np.arange(len(f)) / SR * 0.9) ** 2
-f = 0.8 * f + 0.45 * crowd * swell / np.abs(crowd).max()
-write_wav(OUT / "fancam.wav", f)
+# ---------- member fancams: crowd noise that swells, each starts at a different point of the song ----------
+MEMBERS = [  # (file, label, song time at video t=0, length, colour)
+    ("member_a", "Member A (sample)", 4.0, 22.0, (240, 120, 150)),
+    ("member_b", "Member B (sample)", 2.0, 24.0, (120, 200, 240)),
+    ("member_c", "Member C (sample)", -1.0, 26.0, (250, 200, 90)),
+]
+for name, _, start, length, _ in MEMBERS:
+    f = song_at(max(start, 0), length, lead_silence=max(-start, 0))
+    crowd = lowpass(rng.standard_normal(len(f)), 0.25)
+    swell = 0.5 + 0.5 * np.sin(np.arange(len(f)) / SR * 0.9) ** 2
+    f = 0.8 * f + 0.45 * crowd * swell / np.abs(crowd).max()
+    write_wav(OUT / f"{name}.wav", f)
 
 # ---------- video frames ----------
 hit_times = np.array([h for h, s in hits if s == 1.0])
@@ -129,22 +133,21 @@ def render(path_raw, w, h, length, song_offset, style):
         c = int(60 + 195 * fl)
         dr.rectangle([0, 0, w, h * 0.035], fill=(c, c, c))
         dr.text((w * 0.06, h * 0.06), style["label"], font=font, fill=style["text"])
-        dr.text((w * 0.06, h * 0.06 + w * 0.1), f"歌曲 {max(st,0):05.2f}s" if st >= 0 else "（还没放音乐）",
+        dr.text((w * 0.06, h * 0.06 + w * 0.1), f"song {max(st,0):05.2f}s" if st >= 0 else "(no music yet)",
                 font=small, fill=style["text"])
         proc.stdin.write(img.tobytes())
     proc.stdin.close(); proc.wait()
 
 render(OUT / "practice_v.mp4", 360, 640, P_LEN, P_LEAD,
-       dict(bg=(214, 210, 200), fg=(70, 90, 140), text=(40, 40, 40), label="练习视频（假）", stage=False))
-render(OUT / "fancam_v.mp4", 540, 960, F_LEN, -F_START,
-       dict(bg=(12, 10, 22), fg=(240, 120, 150), text=(240, 240, 240), label="成员直拍（假）", stage=True))
+       dict(bg=(214, 210, 200), fg=(70, 90, 140), text=(40, 40, 40), label="Practice (sample)", stage=False))
+for name, label, start, length, colour in MEMBERS:
+    render(OUT / f"{name}_v.mp4", 540, 960, length, -start,
+           dict(bg=(12, 10, 22), fg=colour, text=(240, 240, 240), label=label, stage=True))
 
-for name in ["practice", "fancam"]:
+for name in ["practice"] + [m[0] for m in MEMBERS]:
     v, a = OUT / f"{name}_v.mp4", OUT / f"{name}.wav"
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", v, "-i", a, "-c:v", "libx264", "-profile:v", "main",
                     "-pix_fmt", "yuv420p", "-crf", "28", "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart",
                     "-shortest", OUT / f"{name}.mp4"], check=True)
-    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", v, "-i", a, "-c:v", "libvpx-vp9", "-b:v", "300k",
-                    "-c:a", "libopus", "-shortest", OUT / f"{name}.webm"], check=True)
     v.unlink(); a.unlink()
-print("expected: fancam_time = practice_time - 5.5")
+print("expected offsets (member time = practice time + d): A -5.5, B -3.5, C -0.5")
