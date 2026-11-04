@@ -1,6 +1,6 @@
 # CLAUDE.md — Novae Dance Project
 
-> **接手先读 `HANDOFF.md`**（2026-11-04：下一步是重新设计外观 → 压缩 9 个直拍 → Google Drive 收提交 → GitHub Pages 上线）。
+> **接手先读 `HANDOFF.md`**（2026-11-04：外观、压缩、Drive 代码、上线都做完了；等用户设置 Google Drive，再填链接、在 iPhone 上测）。
 
 用户带一个小孩舞队。这个仓库放给舞队用的小工具。用户用中文沟通，回复用简单直白的中文。
 
@@ -11,7 +11,8 @@
 - 外观（用户 2026-11-04 定稿 S2）：Novae logo 配色（粉 #f08cc8 → 淡紫 #b49cf2 → 天蓝 #7cc4ff，颜色是从小图估的，有原图再校准），只用手机自带字体，顶部是深色“夜空”卡片 + 渐变流星（SVG）。顶部小字 “EDS Junior · NOVAE”。用户不要：太多颜色和字体、贴纸/可爱风、放射线。步骤标题用直接的指令，不用问句。不要绑定某一首歌（NEON 只是其中一个作业）。
 - Artifact 片段用 `python3 fancam-compare/tools/build_artifact.py index.html OUT` 生成（取 `artifact:*` 标记之间的内容）。
 - 决定：全部在手机浏览器里处理，视频不上传、不存 GitHub（未成年人隐私；GitHub 单文件 100 MB 限制）。
-- 在线版本是 Claude Artifact：https://claude.ai/artifact/VteLrSBvY2cCiXXc5VPPHC （声明了 `downloads` 能力，用来“保存到手机”）。Artifact 版本是 `index.html` 去掉 `<!doctype>…<body>` 外壳的片段；改完要同时更新 repo 和 Artifact。
+- **正式网址（GitHub Pages，2026-11-04 上线）**：https://jqlaura.github.io/novae-dance-project/ （根目录 `index.html` 跳到 `fancam-compare/`）。push 到 main 一两分钟后自动更新。
+- 旧的 Claude Artifact 预览（https://claude.ai/artifact/VteLrSBvY2cCiXXc5VPPHC）不再更新。
 - 用户 iPhone 实测（2026-11-04）：① “声音读不出来” → 改成自己拆 MOV/MP4 的 AAC 音轨；② 预览卡顿、没声音 → 预览改用主视频自带声音（静音键不影响），另一个视频只微调速度跟随。改完待用户再测。
 - 已定（用户 2026-11-04）：提交存用户的 **Google Drive**（私人文件夹，只有教练能看），网页放 **GitHub Pages**（仓库可以公开），全部免费，不用 Netlify（用户的 delibble 在 Netlify，别动）。细节见 HANDOFF.md。
 - 9 个成员直拍（原文件 `~/Downloads/NEON_FanCam_<成员>.mp4`，1440×2560）压成 720×1280 放在 `~/Downloads/neon-720/NEON_<成员>.mp4`（libx264 medium，crf 25 + maxrate 1600k，声音直接复制，每个约 50 MB；不限码率时 crf 23 会超过 100 MB）。由用户传到 Drive。不放进公开仓库（M2 的版权视频）。
