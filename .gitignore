@@ -2,4 +2,3 @@ fancam-compare/tests/tmp/
 __pycache__/
 .DS_Store
 *.raw
-.clasp.json

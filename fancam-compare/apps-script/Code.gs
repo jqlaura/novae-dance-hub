@@ -1,9 +1,9 @@
 /**
  * Fancam Compare — receives kids' comparison videos and saves them in the coach's Google Drive.
  *
- * Deployed with clasp (see SETUP-GOOGLE-DRIVE.md, part C): the team code is filled in only in the
- * copy that is pushed to the coach's Google account, never in this repo. appsscript.json sets the
- * web app to run as the coach and to accept requests from anyone (the team code is the gate).
+ * Setup (step by step in SETUP-GOOGLE-DRIVE.md, part C): paste this file into a new project at
+ * script.google.com, change TEAM_CODE below, run setup() once, then Deploy → New deployment →
+ * Web app (Execute as: Me · Who has access: Anyone).
  * Put the /exec URL in assignments.json → submitUrl.
  *
  * Videos land in "Fancam Submissions/<assignment>/" in your My Drive. That folder is private:

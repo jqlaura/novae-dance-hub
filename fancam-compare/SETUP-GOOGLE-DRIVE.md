@@ -6,7 +6,7 @@
 |---|---|---|
 | A | 把成员直拍放进 Drive，网页从这里读 | 文件夹链接 |
 | B | 建一个 API 密钥，让网页能读这些视频 | 这个密钥（一串字母数字） |
-| C | 建一个“收作业”的小程序，孩子的视频存进你的私人文件夹（Claude 自动部署，你点几下授权） | 队伍口令 |
+| C | 建一个“收作业”的小程序，孩子的视频存进你的私人文件夹 | 一个以 `/exec` 结尾的网址 |
 
 谁能看到什么：
 - **成员直拍**：知道链接的人能看（本来就是 YouTube 上的公开视频）。
@@ -38,23 +38,54 @@
 
 > 有了这两个限制，别人就算拿到这个密钥，也只能在你的网页上用来读 Drive 视频，做不了别的。
 
-## C. 建“收作业”小程序（Apps Script）— 大部分由 Claude 自动完成
+## C. 建“收作业”小程序（Apps Script）— 大约 10 分钟
 
-小程序的代码在 [`apps-script/Code.gs`](apps-script/Code.gs)。Claude 用 Google 官方的命令行工具 **clasp** 在你的账号里建项目、上传代码、部署；你只需要点三下：
+### C1. 新建项目，粘贴代码
 
-1. **打开 Apps Script API**：打开 <https://script.google.com/home/usersettings>，把 **Google Apps Script API** 切到 **On**。
-2. **给 clasp 授权**：Claude 运行 `clasp login`，你的浏览器会弹出 Google 登录页 → 选你的账号 → **Allow**。（如果提示 “Google hasn't verified this app”，点 **Continue**。clasp 是 Google 官方的开源工具。）
-3. **定一个队伍口令**告诉 Claude（比如 `stars2026`，别用孩子的名字或生日）。
+1. 打开 <https://script.google.com>（用和 Drive 同一个 Google 账号），左上角点 **New project（新项目）**。
+2. 左上角点 **Untitled project**，改名为 `Novae Dance Hub — Submit`，点 **Rename**。
+3. 中间编辑区里已经有几行 `function myFunction() { … }`：点进编辑区，按 **⌘A** 全选，再按 **Delete** 删掉。
+4. 粘贴代码：
+   - 如果 Claude 已经把代码复制到你的剪贴板，直接按 **⌘V**。
+   - 不然就打开 <https://raw.githubusercontent.com/jqlaura/novae-dance-hub/main/fancam-compare/apps-script/Code.gs>，**⌘A**、**⌘C**，回到编辑区 **⌘V**。
+5. 在最上面找到这一行（第 13 行左右）：
+   ```js
+   const TEAM_CODE = 'change-me';
+   ```
+   只把引号里的 `change-me` 换成你的队伍口令，比如 `'stars2026'`。引号要保留；口令别用孩子的名字或生日。
+6. 按 **⌘S** 保存（或点编辑区上方的软盘图标 💾）。
 
-然后 Claude 会：建项目 `Novae Dance Hub — Submit` → 上传代码（只在上传的那一份里填口令，仓库里没有）→ 部署成网页应用（以你的身份运行，任何人可以访问）→ 把 `/exec` 网址填进 `assignments.json`。
+### C2. 运行一次 setup（授权 + 建收作业文件夹）
 
-4. **允许它存文件到你的 Drive**（Google 规定这一步必须本人点）：Claude 会给你一个编辑器链接。打开后，上方函数下拉框选 **setup** → 点 **▶ Run** → **Review permissions** → 选你的账号 → 看到 “Google hasn't verified this app” 就点 **Advanced → Go to … (unsafe)** → **Allow**。这是你自己的程序，所以 Google 没审核过，没关系。下方日志会出现 `Submissions folder: https://drive.google.com/...`，这就是收作业的文件夹。
+1. 编辑区上方有一排按钮：**▶ Run**、**Debug**，旁边有一个函数下拉框。在下拉框里选 **setup**。
+2. 点 **▶ Run**。
+3. 弹出 **Authorization required** → 点 **Review permissions**。
+4. 选你的 Google 账号。
+5. 出现 **Google hasn't verified this app**：点左下角小字 **Advanced（高级）** → 再点最下面的 **Go to Novae Dance Hub — Submit (unsafe)**。这是你自己的程序，所以 Google 没审核过，没关系。
+6. 下一页列出权限（查看、编辑你 Drive 里的文件；连接外部服务）→ 拉到底点 **Allow（允许）**。
+7. 页面下方会打开 **Execution log（执行日志）**，出现一行 `Submissions folder: https://drive.google.com/...`。这就是收作业的文件夹，已经建在你的 Drive 里了。
 
-> “任何人可以访问”的意思是孩子不用登录 Google 就能交作业；但没有队伍口令，什么都传不进来，也看不到任何东西。
+> 如果日志里还有一行 “Remember to change TEAM_CODE”，说明 C1 第 5 步没改口令：回去改好，⌘S，再运行一次 setup。
+
+### C3. 部署成网页应用
+
+1. 右上角蓝色按钮 **Deploy（部署）** → **New deployment（新建部署）**。
+2. 左边 **Select type** 旁边点齿轮 ⚙ → 选 **Web app**。
+3. 右边填：
+   - **Description（说明）**：`v1`（随便写）
+   - **Execute as（执行身份）**：**Me (你的邮箱)**
+   - **Who has access（谁可以访问）**：**Anyone（任何人）**。注意不要选 “Anyone with Google account”。
+4. 点 **Deploy**。如果又要求授权，按 C2 第 3–6 步再点一次。
+5. 出现 **Deployment successfully created**，下面有 **Web app URL**（`https://script.google.com/macros/s/…/exec`）→ 点 **Copy** → 点 **Done**。
+6. 把这个网址发给 Claude，它会填进网页并测试一次提交。
+
+> “Anyone” 的意思是孩子不用登录 Google 就能交作业；但没有队伍口令，什么都传不进来，也看不到任何东西。
 
 ### 以后要改口令
 
-告诉 Claude 新口令，它会重新上传并更新部署，网址不变。（自己改也可以：在编辑器里改最上面的 `TEAM_CODE` → ⌘S → **Deploy → Manage deployments** → ✏ → **Version: New version** → **Deploy**。）
+在编辑器里改 `TEAM_CODE` → ⌘S → **Deploy → Manage deployments** → 选中这个部署，点铅笔 ✏ → **Version** 选 **New version** → **Deploy**。网址不变。
+
+> 只改代码、不重新部署的话，网页用的还是旧版本，这一步不能漏。
 
 ---
 
@@ -71,7 +102,7 @@
 
 ## 做完以后
 
-- 把 Drive 文件夹链接、API 密钥、队伍口令发给 Claude，它会填进 `assignments.json` 并部署 C。
+- 把 Drive 文件夹链接、API 密钥、`/exec` 网址发给 Claude，它会填进 `assignments.json` 并测试。
 - 把队伍口令告诉孩子（口令不会出现在网页或仓库里）。
 - 孩子交的视频会出现在 Drive 的 `Fancam Submissions/<作业名>/`，文件名是 `名字 · 成员 · 日期 时间.mp4`。
 
