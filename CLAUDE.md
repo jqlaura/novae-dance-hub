@@ -9,6 +9,8 @@
 - 在线版本是 Claude Artifact：https://claude.ai/artifact/VteLrSBvY2cCiXXc5VPPHC （声明了 `downloads` 能力，用来“保存到手机”）。Artifact 版本是 `index.html` 去掉 `<!doctype>…<body>` 外壳的片段；改完要同时更新 repo 和 Artifact。
 - 用户 iPhone 实测（2026-11-04）：① “声音读不出来” → 改成自己拆 MOV/MP4 的 AAC 音轨；② 预览卡顿、没声音 → 预览改用主视频自带声音（静音键不影响），另一个视频只微调速度跟随。改完待用户再测。
 - 待定：是否分享给孩子们（Artifact 公开链接，或 GitHub Pages；仓库是私有的，Pages 需要付费账号或改公开）。
+- 成员直拍清单见 `fancams.md`（A2O LITE NEON 9 人，MPD직캠 10.22 竖版 4K，已核实）。舞队要的是**竖版、全身、整首**的直拍；横版不要。
+- 云端环境的网络要允许 `www.youtube.com`、`youtu.be` 才能查视频标题和尺寸（2026-11-04 用户已放开）。查尺寸：抓 watch 页面里 `ytInitialPlayerResponse` 的 `adaptiveFormats` 宽高；查标题：oEmbed。
 - 测试方法见 README。合成示例的正确答案：相差 5.5 秒。
 
 ## 规则
