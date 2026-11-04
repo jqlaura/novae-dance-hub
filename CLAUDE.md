@@ -19,7 +19,7 @@
 - Drive（2026-11-04 已接好，见 HANDOFF）：`assignments.json` 的 `video` 可以直接贴 Drive 分享链接，网页经 Drive API + `driveApiKey` 读取；`submitUrl` 是 Apps Script 网页应用（`apps-script/Code.gs`，口令 `TEAM_CODE` 只写在脚本里），按 8 MB 分块 base64 上传，脚本用 Drive 可续传上传拼成文件，存 `Fancam Submissions/<作业>/`。用户的设置步骤：`fancam-compare/SETUP-GOOGLE-DRIVE.md`。本地测提交可以用假的脚本服务（协议：`start` → `{id, chunk}`，`chunk` → `{done, next}`）。
 - 成员直拍清单见 `fancams.md`（A2O LITE NEON 9 人，MPD직캠 10.22 竖版 4K，已核实）。舞队要的是**竖版、全身、整首**的直拍；横版不要。
 - 云端环境的网络要允许 `www.youtube.com`、`youtu.be` 才能查视频标题和尺寸（2026-11-04 用户已放开）。查尺寸：抓 watch 页面里 `ytInitialPlayerResponse` 的 `adaptiveFormats` 宽高；查标题：oEmbed。
-- 开始时间（第 5 步，用户 2026-11-04 强调：作业常常只是歌的中间一段）：对齐后滑块自动放到孩子视频在成员直拍里的位置；孩子自己挪开始时间，就只在“包含这个时间”的范围里重新对一次音乐（副歌重复时防止对错）；孩子手动点过 Try another / 微调就不覆盖。真直拍测试：Himeki 1:35 起 40 秒对 Young → 95.0 秒。
+- 开始时间（第 5 步，用户 2026-11-04 强调：作业常常只是歌的中间一段）：对齐后滑块自动放到孩子视频在成员直拍里的位置；孩子自己挪开始时间，就只在“包含这个时间”的范围里重新对一次音乐（副歌重复时防止对错）；孩子手动点过 Try another / 微调就不覆盖。重新对的结果必须不弱于全局最好匹配的 60%，否则保持原匹配（a90c799 没有这个保护：孩子把开始时间放到 0:05 时，中段片段会被强行对到 5.46 秒，完全对不上；用户 2026-11-04 实测“完全没对齐”）。状态栏写明“Your video at X = 成员 video at Y”，方便排查。真直拍测试：Himeki 1:35 起 40 秒对 Young → 95.0 秒。
 - 测试方法见 README。合成示例的正确答案：相差 5.5 秒。
 
 ## 规则

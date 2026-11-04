@@ -555,7 +555,7 @@ function align(ep, ef, range) {    // range = {lo, hi}: only offsets d (seconds)
   }
   if (!picks.length) return null;
   const ratio = picks.length > 1 && picks[1].score > 0 ? picks[0].score / picks[1].score : 9;
-  return { d: picks[0].d, ratio, candidates: picks.map((p) => p.d) };
+  return { d: picks[0].d, score: picks[0].score, ratio, candidates: picks.map((p) => p.d) };
 }
 
 
@@ -766,6 +766,14 @@ function startAtMatch() {
   $('startLbl').textContent = fmt(S.startAt);
   try { $('startVid').currentTime = S.startAt + 0.05; } catch (e) {}
 }
+// Best music match whose part of the member's video contains the start time you picked — but only
+// if it is almost as strong as the best match anywhere. A weak match near your pick is just noise:
+// then we keep the best match (your start time can't override the music).
+function alignNear() {
+  const best = align(S.env.p, S.env.f);
+  const near = align(S.env.p, S.env.f, { lo: S.startAt - S.dur.p, hi: S.startAt + 3 });
+  return near && near.score >= 0.6 * best.score ? { r: near, moved: Math.abs(near.d - best.d) > 0.2 } : { r: best, moved: false };
+}
 // You picked a start time: songs repeat (chorus!), so look for the best music match again, only
 // where your video would contain that time. Skipped if you already picked a match by hand and
 // it still covers your start time.
@@ -773,8 +781,8 @@ function rematchIfOutside() {
   if (!S.aligned || S.exporting || !S.env.p || !S.env.f) return;
   const c = coverage();
   if (S.manualMatch && S.startAt >= c.from - 1 && S.startAt <= c.to - 1) return;
-  const r = align(S.env.p, S.env.f, { lo: S.startAt - S.dur.p, hi: S.startAt + 3 });
-  if (!r || Math.abs(r.d - S.d) < 0.2) return;
+  const { r } = alignNear();
+  if (Math.abs(r.d - S.d) < 0.2) return;
   S.lastAlign = r; S.cand = r.candidates; S.candIdx = 0; S.d = r.d; S.manualMatch = false;
   const was = S.playing; stopPlayback(); recompute(); seekAll(0);
   showAlignStatus('ok', 'Matched again near your start time');
@@ -794,8 +802,7 @@ function showStartHint() {
 // ---------- alignment ----------
 function runAlign() {
   status('busy', 'Matching the music…');
-  const near = S.startTouched ? align(S.env.p, S.env.f, { lo: S.startAt - S.dur.p, hi: S.startAt + 3 }) : null;
-  const r = near || align(S.env.p, S.env.f);
+  const r = S.startTouched ? alignNear().r : align(S.env.p, S.env.f);
   S.lastAlign = r; S.cand = r.candidates; S.candIdx = 0;
   S.d = r.d; S.aligned = true; S.T = 0; S.manualMatch = false;
   const sure = r.ratio >= 1.05;
@@ -803,7 +810,8 @@ function runAlign() {
   startAtMatch(); autoLayout(); recompute(); seekAll(0); refreshSteps();
 }
 function showAlignStatus(kind, main) {
-  status(kind, main, "Tap ▶ to check. If the moves don't line up, try another match or open Adjust.");
+  const c = coverage(), mine = Math.max(0, -S.d);
+  status(kind, main, `Your video at ${fmt(mine)} = ${S.member ? S.member.name + "'s" : "the member's"} video at ${fmt(c.from)}. Tap ▶ to check. If the moves don't line up, try another match or open Adjust.`);
   $('nextCand').hidden = !(S.cand && S.cand.length > 1);
   if (S.cand) $('nextCand').textContent = `Try another match (${S.candIdx + 1}/${S.cand.length})`;
 }
