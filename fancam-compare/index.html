@@ -331,7 +331,7 @@ function status(kind, main, sub = '') {
   $('status').className = 'status ' + kind;
   $('statusMain').textContent = main; $('statusSub').textContent = sub;
 }
-const fmt = (s) => { s = Math.max(0, s); const m = Math.floor(s / 60); return m + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
+const fmt = (s) => { s = Math.max(0, Math.floor(s + 0.02)); const m = Math.floor(s / 60); return m + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
 const reduceMotion = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ---------- FFT (radix-2, in place) ----------
@@ -525,7 +525,7 @@ function onsetEnvelope(x) {
   return out;
 }
 // returns { d, ratio, candidates } with fancamTime = practiceTime + d
-function align(ep, ef) {
+function align(ep, ef, range) {    // range = {lo, hi}: only offsets d (seconds) inside it
   let n = 1; while (n < ep.length + ef.length) n <<= 1;
   const ar = new Float64Array(n), ai = new Float64Array(n), br = new Float64Array(n), bi = new Float64Array(n);
   ar.set(ep); br.set(ef);
@@ -537,7 +537,8 @@ function align(ep, ef) {
   fft(br, bi, true);
   const minOverlap = Math.min(3 * FPS_ENV, Math.floor(Math.min(ep.length, ef.length) * 0.5));
   const lagAt = (i) => (i < n / 2 ? i : i - n);
-  const valid = (k) => Math.min(ep.length, ef.length - k) - Math.max(0, -k) >= minOverlap;
+  const valid = (k) => Math.min(ep.length, ef.length - k) - Math.max(0, -k) >= minOverlap &&
+    (!range || (k >= range.lo * FPS_ENV && k <= range.hi * FPS_ENV));
   // pick the 3 best offsets, each at least 0.4 s apart (a wrong match is usually off by whole beats)
   const picks = [];
   for (let c = 0; c < 3; c++) {
@@ -552,6 +553,7 @@ function align(ep, ef) {
     const den = y0 - 2 * y1 + y2, frac = den ? Math.max(-0.5, Math.min(0.5, 0.5 * (y0 - y2) / den)) : 0;
     picks.push({ k: lagAt(bi0), d: (lagAt(bi0) + frac) / FPS_ENV, score: best });
   }
+  if (!picks.length) return null;
   const ratio = picks.length > 1 && picks[1].score > 0 ? picks[0].score / picks[1].score : 9;
   return { d: picks[0].d, ratio, candidates: picks.map((p) => p.d) };
 }
@@ -678,7 +680,7 @@ function setMirror(on, fromQuestion) {
 
 // ---------- 4. member ----------
 function resetMember() {
-  S.env.f = null; S.audio.f = null; S.dur.f = 0; S.aligned = false; S.cand = null; S.startAt = 0;
+  S.env.f = null; S.audio.f = null; S.dur.f = 0; S.aligned = false; S.cand = null; S.startAt = 0; S.startTouched = false;
   vid.f.removeAttribute('src'); vid.f.load();
   const sv = $('startVid'); sv.removeAttribute('src'); sv.load();
   $('nextCand').hidden = true; $('result').hidden = true;
@@ -743,33 +745,62 @@ function setupStart() {
   const r = $('startRange'); r.max = Math.max(0, S.dur.f - 1).toFixed(1);
   setStart(0);
 }
-function setStart(t) {
+function setStart(t, byUser) {
   const max = +$('startRange').max || 0;
   S.startAt = Math.max(0, Math.min(max, t));
+  if (byUser) { S.startTouched = true; clearTimeout(S.rematchTimer); S.rematchTimer = setTimeout(rematchIfOutside, 500); }
   $('startRange').value = S.startAt; $('startLbl').textContent = fmt(S.startAt);
   try { $('startVid').currentTime = S.startAt + 0.05; } catch (e) {}
   if (S.aligned) { const was = S.playing; stopPlayback(); recompute(); seekAll(0); if (was) play(); }
   showStartHint();
 }
+// the part of the member's video that your video covers (from the music match)
+function coverage() {
+  const sp0 = Math.max(0, -S.d), sf0 = sp0 + S.d;
+  return { from: sf0, to: sf0 + Math.max(0, Math.min(S.dur.p - sp0, S.dur.f - sf0)) };
+}
+// after a music match: put the start slider where your video begins in the member's video
+function startAtMatch() {
+  if (S.startTouched) return;
+  $('startRange').value = S.startAt = Math.min(+$('startRange').max || 0, coverage().from);
+  $('startLbl').textContent = fmt(S.startAt);
+  try { $('startVid').currentTime = S.startAt + 0.05; } catch (e) {}
+}
+// You picked a start time: songs repeat (chorus!), so look for the best music match again, only
+// where your video would contain that time. Skipped if you already picked a match by hand and
+// it still covers your start time.
+function rematchIfOutside() {
+  if (!S.aligned || S.exporting || !S.env.p || !S.env.f) return;
+  const c = coverage();
+  if (S.manualMatch && S.startAt >= c.from - 1 && S.startAt <= c.to - 1) return;
+  const r = align(S.env.p, S.env.f, { lo: S.startAt - S.dur.p, hi: S.startAt + 3 });
+  if (!r || Math.abs(r.d - S.d) < 0.2) return;
+  S.lastAlign = r; S.cand = r.candidates; S.candIdx = 0; S.d = r.d; S.manualMatch = false;
+  const was = S.playing; stopPlayback(); recompute(); seekAll(0);
+  showAlignStatus('ok', 'Matched again near your start time');
+  if (was) play();
+}
 function showStartHint() {
   const h = $('startHint');
-  if (!S.aligned) { h.textContent = "Time in the member's video. The comparison runs from here to the end of your video."; return; }
+  if (!S.aligned) { h.textContent = "Time in the member's video where the comparison starts. We set it for you once the music is matched."; return; }
   const sp0 = Math.max(0, -S.d), sf0 = sp0 + S.d, lfull = Math.max(0, Math.min(S.dur.p - sp0, S.dur.f - sf0));
   const s = starts();
   if (S.startAt > sf0 + lfull - 1) h.textContent = `Your video only covers ${fmt(sf0)}–${fmt(sf0 + lfull)} of the member's video, so we start at ${fmt(s.f)}.`;
   else if (S.startAt < sf0 - 0.5) h.textContent = `Your video starts at ${fmt(sf0)} of the member's video, so the comparison starts there.`;
+  else if (!S.startTouched || Math.abs(S.startAt - sf0) < 0.5) h.textContent = `Found by the music: your video is ${fmt(sf0)}–${fmt(sf0 + lfull)} of the member's video. Move this if you want to start later.`;
   else h.textContent = `Comparison: ${fmt(s.f)} to ${fmt(s.f + S.L)} of the member's video (${fmt(S.L)} long).`;
 }
 
 // ---------- alignment ----------
 function runAlign() {
   status('busy', 'Matching the music…');
-  const r = align(S.env.p, S.env.f);
+  const near = S.startTouched ? align(S.env.p, S.env.f, { lo: S.startAt - S.dur.p, hi: S.startAt + 3 }) : null;
+  const r = near || align(S.env.p, S.env.f);
   S.lastAlign = r; S.cand = r.candidates; S.candIdx = 0;
-  S.d = r.d; S.aligned = true; S.T = 0;
+  S.d = r.d; S.aligned = true; S.T = 0; S.manualMatch = false;
   const sure = r.ratio >= 1.05;
   showAlignStatus(sure ? 'ok' : 'warn', sure ? 'Matched to the music' : 'Matched — please check it');
-  autoLayout(); recompute(); seekAll(0); refreshSteps();
+  startAtMatch(); autoLayout(); recompute(); seekAll(0); refreshSteps();
 }
 function showAlignStatus(kind, main) {
   status(kind, main, "Tap ▶ to check. If the moves don't line up, try another match or open Adjust.");
@@ -1046,8 +1077,8 @@ $('mirrorChoice').addEventListener('click', (e) => {
   S.mirrorAnswered = true; setMirror(b.dataset.v === 'no', true); refreshSteps();
   if (!S.member) scrollToStep(4);
 });
-$('startRange').addEventListener('input', (e) => setStart(+e.target.value));
-$('startNudge').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setStart(S.startAt + +b.dataset.s); });
+$('startRange').addEventListener('input', (e) => setStart(+e.target.value, true));
+$('startNudge').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setStart(S.startAt + +b.dataset.s, true); });
 $('playBtn').addEventListener('click', () => (S.playing ? stopPlayback() : play()));
 $('scrub').addEventListener('input', (e) => { scrubbing = true; const was = S.playing; stopPlayback(); seekAll(S.L * e.target.value / 1000); scrubbing = false; if (was) play(); });
 $('segMirror').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; S.mirrorAnswered = true; setMirror(b.dataset.v === '1', true); refreshSteps(); });
@@ -1062,13 +1093,13 @@ $('segAudio').addEventListener('click', (e) => {
 });
 $('nudge').addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b || !S.aligned) return;
-  S.d += parseFloat(b.dataset.d);           // + delays your picture relative to the member
+  S.d += parseFloat(b.dataset.d); S.manualMatch = true;           // + delays your picture relative to the member
   const was = S.playing; stopPlayback(); recompute(); seekAll(S.T); if (was) play();
 });
 $('nextCand').addEventListener('click', () => {
   if (!S.cand || S.exporting) return;
-  S.candIdx = (S.candIdx + 1) % S.cand.length; S.d = S.cand[S.candIdx];
-  const was = S.playing; stopPlayback(); recompute(); seekAll(0);
+  S.candIdx = (S.candIdx + 1) % S.cand.length; S.d = S.cand[S.candIdx]; S.manualMatch = true;
+  const was = S.playing; stopPlayback(); startAtMatch(); recompute(); seekAll(0);
   showAlignStatus(S.candIdx === 0 ? 'ok' : 'warn', S.candIdx === 0 ? 'Back to the first match' : `Trying match ${S.candIdx + 1}`);
   if (was) play();
 });
