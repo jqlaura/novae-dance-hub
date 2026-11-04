@@ -11,7 +11,7 @@
 - 外观（用户 2026-11-04 定稿 S2）：Novae logo 配色（粉 #f08cc8 → 淡紫 #b49cf2 → 天蓝 #7cc4ff，颜色是从小图估的，有原图再校准），只用手机自带字体，顶部是深色“夜空”卡片 + 渐变流星（SVG）。顶部小字 “EDS Junior · NOVAE”。用户不要：太多颜色和字体、贴纸/可爱风、放射线。步骤标题用直接的指令，不用问句。不要绑定某一首歌（NEON 只是其中一个作业）。
 - Artifact 片段用 `python3 fancam-compare/tools/build_artifact.py index.html OUT` 生成（取 `artifact:*` 标记之间的内容）。
 - 决定：全部在手机浏览器里处理，视频不上传、不存 GitHub（未成年人隐私；GitHub 单文件 100 MB 限制）。
-- **正式网址（GitHub Pages，2026-11-04 上线）**：https://jqlaura.github.io/novae-dance-project/ （根目录 `index.html` 跳到 `fancam-compare/`）。push 到 main 一两分钟后自动更新。
+- **正式网址（GitHub Pages，2026-11-04 上线）**：https://jqlaura.github.io/novae-dance-hub/ （根目录 `index.html` 跳到 `fancam-compare/`）。push 到 main 一两分钟后自动更新。 仓库 2026-11-04 从 novae-dance-project 改名为 **jqlaura/novae-dance-hub**（项目名 Novae Dance Hub）；本地文件夹名没改。
 - 旧的 Claude Artifact 预览（https://claude.ai/artifact/VteLrSBvY2cCiXXc5VPPHC）不再更新。
 - 用户 iPhone 实测（2026-11-04）：① “声音读不出来” → 改成自己拆 MOV/MP4 的 AAC 音轨；② 预览卡顿、没声音 → 预览改用主视频自带声音（静音键不影响），另一个视频只微调速度跟随。改完待用户再测。
 - 已定（用户 2026-11-04）：提交存用户的 **Google Drive**（私人文件夹，只有教练能看），网页放 **GitHub Pages**（仓库可以公开），全部免费，不用 Netlify（用户的 delibble 在 Netlify，别动）。细节见 HANDOFF.md。

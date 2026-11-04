@@ -4,7 +4,7 @@
 
 ## 现在的状态
 
-- **已上线**：https://jqlaura.github.io/novae-dance-project/ （GitHub Pages，main 分支根目录，自动跳到 `fancam-compare/`）。仓库已公开（上线前查过：没有孩子视频、口令、密钥；历史里的视频都是合成的）。
+- **已上线**：https://jqlaura.github.io/novae-dance-hub/ （GitHub Pages，main 分支根目录，自动跳到 `fancam-compare/`）。仓库已公开（上线前查过：没有孩子视频、口令、密钥；历史里的视频都是合成的）。
 - **外观**定稿 S2：Novae logo 配色 + 夜空流星头图 + 系统字体，步骤标题是指令（见 CLAUDE.md）。
 - **Drive 提交 / 读直拍的代码做好了**，用本地假服务测过（分块上传、重试、口令错误、拼好的文件逐字节一致）。真的 Apps Script 还没测。
 - **9 个直拍**压好在用户 Mac 的 `~/Downloads/neon-720/NEON_<成员>.mp4`（720×1280，每个约 47 MB）。

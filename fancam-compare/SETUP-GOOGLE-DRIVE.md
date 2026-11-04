@@ -72,10 +72,10 @@
 
 我已经检查过仓库：没有孩子的视频、口令或密钥，历史里的视频都是合成的假视频。可以公开。
 
-1. 打开 <https://github.com/jqlaura/novae-dance-project>，登录 → 上方 **Settings**。
+1. 打开 <https://github.com/jqlaura/novae-dance-hub>，登录 → 上方 **Settings**。
 2. 拉到最下面 **Danger Zone** → **Change visibility** → **Change to public**，按提示确认。
 3. 左边点 **Pages**。**Build and deployment** 下面：Source 选 **Deploy from a branch**，Branch 选 **main**、文件夹 **/ (root)** → **Save**。
-4. 等 1–2 分钟，刷新这个页面，上方会显示网址：**https://jqlaura.github.io/novae-dance-project/**（会自动跳到直拍对比页面）。这就是发给孩子的链接。
+4. 等 1–2 分钟，刷新这个页面，上方会显示网址：**https://jqlaura.github.io/novae-dance-hub/**（会自动跳到直拍对比页面）。这就是发给孩子的链接。
 
 ---
 
