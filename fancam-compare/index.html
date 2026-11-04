@@ -893,10 +893,11 @@ async function play() {               // called straight from the tap
   if (!S.aligned || S.exporting || S.lining) return;
   if (S.T >= S.L - 0.05) S.T = 0;
   unlockVideos();
+  const tok = S.playTok = (S.playTok || 0) + 1;
   S.lining = true; setPlayBtn(true);
   await lineUp(S.T);
+  if (tok !== S.playTok || S.exporting) return;        // paused or dragged meanwhile
   S.lining = false;
-  if (S.exporting) return;
   const m = vid[S.audioFrom], sl = vid[other(S.audioFrom)];
   sl.muted = true; m.muted = false; m.volume = 1; m.playbackRate = 1; sl.playbackRate = 1;
   const pm = m.play(); sl.play().catch(() => {});
@@ -906,6 +907,7 @@ async function play() {               // called straight from the tap
 }
 function setPlayBtn(on) { $('playBtn').textContent = on ? '❚❚' : '▶'; $('playBtn').setAttribute('aria-label', on ? 'Pause' : 'Play'); }
 function stopPlayback() {
+  S.playTok = (S.playTok || 0) + 1; S.lining = false;
   if (S.src) { try { S.src.stop(); } catch (e) {} S.src = null; }
   for (const k of ['p', 'f']) { vid[k].pause(); vid[k].playbackRate = 1; vid[k].muted = true; }
   const was = S.playing; S.playing = false; setPlayBtn(false);
@@ -1125,8 +1127,15 @@ $('mirrorChoice').addEventListener('click', (e) => {
 });
 $('startRange').addEventListener('input', (e) => setStart(+e.target.value, true));
 $('startNudge').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setStart(S.startAt + +b.dataset.s, true); });
-$('playBtn').addEventListener('click', () => (S.playing ? stopPlayback() : play()));   // play() ignores taps while lining up
-$('scrub').addEventListener('input', (e) => { scrubbing = true; const was = S.playing; stopPlayback(); seekAll(S.L * e.target.value / 1000); scrubbing = false; if (was) play(); });
+$('playBtn').addEventListener('click', () => (S.playing || S.lining ? stopPlayback() : play()));
+// dragging: pause and show the spot; letting go: line both videos up there and carry on playing
+let scrubWas = null;
+$('scrub').addEventListener('input', (e) => {
+  scrubbing = true; if (scrubWas === null) scrubWas = S.playing || S.lining;
+  if (S.playing || S.lining) stopPlayback();
+  seekAll(S.L * e.target.value / 1000);
+});
+$('scrub').addEventListener('change', () => { scrubbing = false; const was = scrubWas; scrubWas = null; updateTime(); if (was) play(); });
 $('segMirror').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; S.mirrorAnswered = true; setMirror(b.dataset.v === '1', true); refreshSteps(); });
 $('segLayout').addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
@@ -1159,5 +1168,39 @@ applyTransforms(); refreshSteps(); loadAssignments();
 })();
 </script>
 <!-- artifact:end -->
+<body><p><a href="fancam-compare/">Fancam Compare</a></p>
+<script>
+// Debug recorder: only with ?debug in the address. Records what both videos do, "Copy log" button.
+if (/[?&]debug\b/.test(location.search)) (function () {
+  const S = window.__dance, q = [], t0 = performance.now();
+  const ms = () => ((performance.now() - t0) / 1000).toFixed(2);
+  const log = (...a) => { q.push(ms() + ' ' + a.join(' ')); if (q.length > 1500) q.splice(0, q.length - 1500); badge.textContent = 'Copy log (' + q.length + ')'; };
+  const badge = document.createElement('button');
+  badge.style.cssText = 'position:fixed;left:8px;bottom:70px;z-index:9999;background:#111;color:#7f7;font:12px monospace;padding:8px 10px;border-radius:8px;border:0';
+  badge.onclick = async () => { const txt = q.join('\n'); try { await navigator.clipboard.writeText(txt); badge.textContent = 'Copied ' + q.length + ' lines'; } catch (e) { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); badge.textContent = 'Copied (' + q.length + ')'; } };
+  document.body.appendChild(badge);
+  const vs = { p: document.getElementById('vidP'), f: document.getElementById('vidF') };
+  const st = (v) => v.currentTime.toFixed(2) + (v.seeking ? 'S' : '') + (v.paused ? 'P' : '') + ' rs' + v.readyState + ' r' + v.playbackRate + (v.muted ? 'm' : '');
+  for (const k of ['p', 'f']) for (const ev of ['loadedmetadata','loadeddata','canplay','play','playing','pause','waiting','stalled','seeking','seeked','ended','emptied','error'])
+    vs[k].addEventListener(ev, () => log('EV', k, ev, st(vs[k]), vs[k].error ? 'err' + vs[k].error.code : ''));
+  window.addEventListener('error', (e) => log('JSERR', e.message, e.lineno));
+  window.addEventListener('unhandledrejection', (e) => log('REJECT', String(e.reason && (e.reason.name + ' ' + e.reason.message) || e.reason)));
+  let lastStatus = '', info = false, al = null;
+  setInterval(() => {
+    const sm = document.getElementById('statusMain').textContent + ' | ' + document.getElementById('statusSub').textContent;
+    if (sm !== lastStatus) { lastStatus = sm; log('STATUS', sm); }
+    if (!info && S.file && S.file.p) { info = true; log('FILE', S.file.p.name, S.file.p.size, S.file.p.type, navigator.userAgent); }
+    if (S.aligned && al !== S.d) { al = S.d; log('MATCH d=' + S.d.toFixed(3), 'durP=' + (+S.dur.p).toFixed(2), 'durF=' + (+S.dur.f).toFixed(2), 'startAt=' + S.startAt, 'L=' + (+S.L).toFixed(2)); }
+    if (S.playing || S.lining || S.exporting) {
+      const sp = Math.max(0, -S.d), err = (vs.p.currentTime - vs.f.currentTime) - (sp - (sp + S.d));
+      log('TICK T=' + (S.T || 0).toFixed(2), 'p=' + st(vs.p), 'f=' + st(vs.f), 'err=' + err.toFixed(2), S.lining ? 'LINING' : '', S.exporting ? 'EXPORT' : '');
+    }
+  }, 250);
+  for (const ev of ['input', 'change']) document.addEventListener(ev, (e) => { if (e.target.id === 'scrub' || e.target.id === 'startRange') log(ev.toUpperCase(), e.target.id, e.target.value); }, true);
+  document.addEventListener('click', (e) => { const b = e.target.closest('button,a'); if (b && b !== badge) log('CLICK', b.id || b.textContent.trim().slice(0, 30)); }, true);
+  log('PAGE', location.href, navigator.userAgent);
+})();
+</script>
+</body></html>
 </body>
 </html>
