@@ -1,4 +1,5 @@
-// End-to-end: assignment → sample practice video → "not mirrored" → member → start time → create → download
+// End-to-end on the demo assignment: sample practice video → "not mirrored" → Member B →
+// check the match (two pairs at 1/3 and 2/3 of your video) → Looks right → generate → download.
 const { chromium } = require('playwright');
 const path = require('path');
 (async () => {
@@ -9,31 +10,43 @@ const path = require('path');
   page.on('pageerror', (e) => console.log('[pageerror]', e.message));
   page.on('console', (m) => { if (m.type() === 'error') console.log('[console]', m.text()); });
   await page.goto(`http://127.0.0.1:${port}/index.html`);
-  await page.screenshot({ path: path.join(out, 'v2_0_start.png'), fullPage: true });
-  await page.selectOption('#assignment', 'demo');
+  await page.waitForFunction(() => window.__dance && window.__dance.assignments.length, null, { timeout: 20000 });
+  await page.evaluate(() => { const s = document.getElementById('assignment'); s.value = 'demo'; s.dispatchEvent(new Event('change')); });
   await page.click('#sampleOwn');
   await page.waitForFunction(() => window.__dance.env.p, null, { timeout: 60000 });
   await page.click('#mirrorChoice button[data-v="no"]');
+  const preview = await page.evaluate(() => ({ frame: document.getElementById('frameVid').style.transform, note: document.getElementById('mirrorNote').textContent, mirror: window.__dance.mirror }));
+  console.log('after "No":', JSON.stringify(preview));
   await page.click('#members button:has-text("Member B")');
   await page.waitForFunction(() => window.__dance.aligned, null, { timeout: 60000 });
-  await page.fill('#startRange', '3');
-  await page.dispatchEvent('#startRange', 'input');
-  const st = await page.evaluate(() => { const S = window.__dance; return { d: +S.d.toFixed(3), startAt: S.startAt, L: +S.L.toFixed(2), mirror: S.mirror,
-    steps: [1,2,3,4,5,6].map((n) => document.getElementById('step' + n).className), hint: document.getElementById('startHint').textContent,
-    status: document.getElementById('statusMain').textContent, label: document.getElementById('labelF').textContent }; });
-  console.log(JSON.stringify(st, null, 1));
-  await page.waitForTimeout(600);
-  await page.screenshot({ path: path.join(out, 'v2_1_ready.png'), fullPage: true });
-  const dlP = page.waitForEvent('download', { timeout: 120000 });
+  await page.waitForTimeout(1500);
+  const before = await page.evaluate(() => ({
+    d: +window.__dance.d.toFixed(3),
+    checks: [['stillPt', 'stillFt', 'stillP', 'startVid'], ['stillPt2', 'stillFt2', 'stillP2', 'startVid2']].map(([a, b, c, e]) =>
+      `${document.getElementById(a).textContent} ↔ ${document.getElementById(b).textContent} (frames at ${document.getElementById(c).currentTime.toFixed(2)} / ${document.getElementById(e).currentTime.toFixed(2)})`),
+    stillPTransform: document.getElementById('stillP').style.transform,
+    step3: document.getElementById('step5').className, step4: document.getElementById('step6').className,
+    exportDisabled: document.getElementById('exportBtn').disabled,
+  }));
+  console.log('before Looks right:', JSON.stringify(before, null, 1));
+  await page.screenshot({ path: path.join(out, 'v5_check.png'), fullPage: true });
+  await page.click('#looksRight');
+  await page.waitForTimeout(400);
+  const after = await page.evaluate(() => ({
+    ok: !document.getElementById('matchOk').hidden, btns: !document.getElementById('matchBtns').hidden,
+    step3: document.getElementById('step5').className, step4: document.getElementById('step6').className,
+    exportDisabled: document.getElementById('exportBtn').disabled,
+  }));
+  console.log('after Looks right:', JSON.stringify(after));
+  await page.screenshot({ path: path.join(out, 'v5_confirmed.png'), fullPage: true });
   await page.click('#exportBtn');
-  await page.waitForFunction(() => !document.getElementById('result').hidden, null, { timeout: 120000 });
-  await page.fill('#kidName', 'Test Kid');
-  await page.click('#saveBtn');
-  const dl = await dlP;
-  const f = path.join(out, dl.suggestedFilename()); await dl.saveAs(f);
-  console.log('downloaded', f);
-  await page.click('#submitBtn');
-  console.log('submit note:', await page.textContent('#submitNote'));
-  await page.screenshot({ path: path.join(out, 'v2_2_done.png'), fullPage: true });
+  await page.waitForFunction(() => !document.getElementById('result').hidden, null, { timeout: 180000 });
+  const blob = await page.evaluate(async () => {
+    const S = window.__dance; const b = S.outBlob; const buf = new Uint8Array(await b.arrayBuffer());
+    let s = ''; for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+    return { b64: btoa(s), ext: S.outExt };
+  });
+  const f = path.join(out, 'v5_out.' + blob.ext); require('fs').writeFileSync(f, Buffer.from(blob.b64, 'base64'));
+  console.log('saved', f);
   await browser.close();
 })();

@@ -101,7 +101,10 @@ select:focus-visible, input[type=text]:focus-visible { outline: 2px solid var(--
 .small .link { font-size: 13px; }
 .mirrorq { display: flex; flex-direction: column; gap: 8px; width: 100%; }
 .mirrorq .k { font-weight: 700; }
-.matchpair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.matchrows { display: flex; flex-direction: column; gap: 14px; }
+.matchpair { display: grid; grid-template-columns: repeat(2, minmax(0, 150px)); justify-content: center; gap: 10px; }
+.matchpair .tag { grid-column: 1 / -1; margin: 0; font: 700 11.5px var(--font-num, ui-monospace, monospace); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); text-align: center; }
+.matchok { margin: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-weight: 700; color: var(--ok); }
 .matchpair figure { margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .matchpair .thumb { aspect-ratio: 9 / 16; background: #000; border-radius: 12px; overflow: hidden; }
 .matchpair .thumb video { width: 100%; height: 100%; object-fit: contain; display: block; }
@@ -270,11 +273,20 @@ canvas#rec { display: none; }
 
   <section class="step locked" id="step5">
     <h2><span class="n">3</span>Check the match</h2>
-    <div class="matchpair">
-      <figure><div class="thumb" id="thumbP"><video id="stillP" muted playsinline preload="auto"></video></div><figcaption>You · <span class="num" id="stillPt">0:00</span></figcaption></figure>
-      <figure><div class="thumb mirror" id="startThumb"><video id="startVid" muted playsinline preload="auto"></video></div><figcaption><span id="stillFname">Member</span> · <span class="num" id="stillFt">0:00</span></figcaption></figure>
+    <div class="matchrows">
+      <div class="matchpair">
+        <p class="tag">Check 1</p>
+        <figure><div class="thumb"><video id="stillP" muted playsinline preload="auto"></video></div><figcaption>You · <span class="num" id="stillPt">0:00</span></figcaption></figure>
+        <figure><div class="thumb mirror" id="startThumb"><video id="startVid" muted playsinline preload="auto"></video></div><figcaption><span id="stillFname">Member</span> · <span class="num" id="stillFt">0:00</span></figcaption></figure>
+      </div>
+      <div class="matchpair">
+        <p class="tag">Check 2</p>
+        <figure><div class="thumb"><video id="stillP2" muted playsinline preload="auto"></video></div><figcaption>You · <span class="num" id="stillPt2">0:00</span></figcaption></figure>
+        <figure><div class="thumb mirror" id="startThumb2"><video id="startVid2" muted playsinline preload="auto"></video></div><figcaption><span id="stillFname2">Member</span> · <span class="num" id="stillFt2">0:00</span></figcaption></figure>
+      </div>
     </div>
     <p class="matchline" id="matchLine">Pick your member first.</p>
+    <p class="matchok" id="matchOk" hidden><span>✓ Match confirmed</span><button class="link" id="matchChange" type="button">Change</button></p>
     <div class="row2" id="matchBtns">
       <button class="btn dark" id="looksRight" type="button">Looks right</button>
       <button class="link" id="fixMatch" type="button">Not right? Tell us where it starts</button>
@@ -697,8 +709,8 @@ function refreshSteps() {
   setStep(2, !has1 ? 'locked' : has2 ? 'done' : 'open');
   setStep(3, !(has1 && has2) ? 'locked' : has3 ? 'done' : 'open');
   setStep(4, !(has1 && has2 && has3) ? 'locked' : memberReady ? 'done' : 'open');
-  setStep(5, !(has1 && has2 && has3 && memberReady) ? 'locked' : 'open');
-  setStep(6, !(has1 && has2 && has3 && memberReady) ? 'locked' : 'open');
+  setStep(5, !(has1 && has2 && has3 && memberReady) ? 'locked' : S.matchConfirmed && S.aligned ? 'done' : 'open');
+  setStep(6, !(has1 && has2 && has3 && memberReady && S.aligned && S.matchConfirmed) ? 'locked' : 'open');
   updateControls();
 }
 function scrollToStep(n) { $('step' + n).scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' }); }
@@ -773,16 +785,17 @@ const waitMeta = (v) => v.readyState >= 1 ? Promise.resolve() : new Promise((r) 
 
 function applyTransforms() {
   const c = S.crop, t = `translate(${(c.x * 100).toFixed(2)}%, ${(c.y * 100).toFixed(2)}%) scale(${c.z})`;
-  $('frameVid').style.transform = (S.mirror ? 'scaleX(-1) ' : '') + t;
-  vid.p.style.transform = (S.mirror ? 'scaleX(-1) ' : '') + t;
+  // your video is shown as you filmed it; "mirror" is applied only in the final comparison video
+  $('frameVid').style.transform = t;
+  vid.p.style.transform = t;
   vid.f.style.transform = S.mirrorF ? 'scaleX(-1)' : '';
-  $('startThumb').classList.toggle('mirror', S.mirrorF);
+  $('startThumb').classList.toggle('mirror', S.mirrorF); $('startThumb2').classList.toggle('mirror', S.mirrorF);
 }
 const clampPan = (v) => Math.max(-0.5 * S.crop.z, Math.min(0.5 * S.crop.z, v));
 (function framing() {               // one finger moves, two fingers zoom (trackpad pinch on a computer)
   const fr = $('frame'), pts = new Map(); let g0 = null;
   fr.tabIndex = 0; fr.setAttribute('aria-label', 'Your video. Drag to move, pinch to zoom, or use arrow keys and + / −.');
-  const sx = () => (S.mirror ? -1 : 1);                 // the preview is shown mirrored: keep the video under the finger
+  const sx = () => 1;                                   // the preview is never mirrored
   const gesture = () => {
     const p = [...pts.values()], r = fr.getBoundingClientRect();
     const cx = p.reduce((a, q) => a + q.x, 0) / p.length, cy = p.reduce((a, q) => a + q.y, 0) / p.length;
@@ -819,7 +832,7 @@ const clampPan = (v) => Math.max(-0.5 * S.crop.z, Math.min(0.5 * S.crop.z, v));
 function setMirror(on, fromQuestion) {
   S.mirror = on; applyTransforms();
   pressSeg('segMirror', (b) => b.dataset.v === (on ? '1' : '0'));
-  $('mirrorNote').textContent = on ? "We'll mirror it for you." : 'Great, we keep it as it is.';
+  $('mirrorNote').textContent = on ? "Got it. We'll mirror it in your comparison video." : "Great, we'll keep it as it is.";
   if (fromQuestion) pressSeg('mirrorChoice', (b) => b.dataset.v === (on ? 'no' : 'yes'));
   updateMatchView();
 }
@@ -832,7 +845,8 @@ function resetMirrorQuestion() {
 function resetMember() {
   S.env.f = null; S.chr.f = null; S.audio.f = null; S.dur.f = 0; S.aligned = false; S.cand = null; S.startAt = 0; S.startTouched = false;
   vid.f.removeAttribute('src'); vid.f.load();
-  const sv = $('startVid'); sv.removeAttribute('src'); sv.load();
+  for (const sv of [$('startVid'), $('startVid2')]) { sv.removeAttribute('src'); sv.load(); sv._primed = false; }
+  S.matchConfirmed = false; $('matchOk').hidden = true; $('matchBtns').hidden = false;
   $('nextCand').hidden = true; $('result').hidden = true; $('exportBtn').hidden = false;
   $('labelF').textContent = 'Member';
   status('', 'Waiting for your video and member', 'We match the two videos by the music.');
@@ -921,17 +935,35 @@ async function showStill(v, t) {
     v.currentTime = Math.max(0, Math.min(t, (v.duration || 1e9) - 0.05));
   } catch (e) {}
 }
+// Two check points, 1/3 and 2/3 into your video, each next to the member's matching moment
+function checkPoints() {
+  const c = coverage(), lo = c.from, hi = Math.max(c.from, c.to - 0.1);
+  return [1 / 3, 2 / 3].map((q) => {
+    const f = Math.max(lo, Math.min(hi, S.dur.p * q + S.d));   // keep it where both videos have the dance
+    return { p: f - S.d, f };
+  });
+}
 function updateMatchView() {
   const line = $('matchLine');
   if (!S.aligned) { line.textContent = S.member && S.env.p ? 'Matching the music…' : 'Upload your video and pick your member first.'; return; }
-  const c = coverage(), mine = Math.max(0, -S.d), name = S.member ? S.member.name : 'the member';
-  line.textContent = mine < 0.5 ? `Your video starts at ${name}'s ${fmt(c.from)}.` : `${fmt(mine)} into your video = ${name}'s ${fmt(c.from)}.`;
-  $('stillPt').textContent = fmt(mine); $('stillFt').textContent = fmt(c.from);
-  const sp = $('stillP'); if (S.url.p && sp.getAttribute('src') !== S.url.p) { sp.src = S.url.p; sp._primed = false; }
-  sp.style.transform = S.mirror ? 'scaleX(-1)' : '';
-  showStill(sp, mine + 0.05); showStill($('startVid'), c.from + 0.05);
+  const name = S.member ? S.member.name : 'the member';
+  line.textContent = `Are you doing the same move as ${name} in both checks?`;
+  checkPoints().forEach((pt, i) => {
+    const n = i ? '2' : '';
+    $('stillPt' + n).textContent = fmt(pt.p); $('stillFt' + n).textContent = fmt(pt.f);
+    $('stillFname' + n).textContent = name;
+    const sp = $('stillP' + n); if (S.url.p && sp.getAttribute('src') !== S.url.p) { sp.src = S.url.p; sp._primed = false; }
+    sp.style.transform = '';
+    const sf = $('startVid' + n); if (S.url.f && sf.getAttribute('src') !== S.url.f) { sf.src = S.url.f; sf._primed = false; }
+    showStill(sp, pt.p + 0.05); showStill(sf, pt.f + 0.05);
+  });
 }
 function startAtMatch() {}
+function confirmMatch(on) {
+  S.matchConfirmed = on;
+  $('matchOk').hidden = !on; $('matchBtns').hidden = on; if (on) $('fixBox').hidden = true;
+  refreshSteps();
+}
 function invalidateResult() { if (!$('result').hidden && !S.submitting) { $('result').hidden = true; $('exportBtn').hidden = false; } }
 function applyFix() {
   if (!S.aligned) return;
@@ -941,7 +973,7 @@ function applyFix() {
   const r = ok ? near : { d: S.startAt, ratio: 1, candidates: [S.startAt], how: 'typed', notes: '' };
   S.lastAlign = r; S.cand = r.candidates; S.candIdx = 0; S.d = r.d; S.manualMatch = true;
   recompute(); invalidateResult();
-  $('fixBox').hidden = true; $('matchBtns').hidden = false;
+  $('fixBox').hidden = true; confirmMatch(false);
   showAlignStatus('ok', ok ? 'Matched again near your time' : 'Using the time you picked');
   updateMatchView();
 }
@@ -951,7 +983,7 @@ function runAlign() {
   status('busy', 'Matching the music…');
   const r = matchMusic();
   S.lastAlign = r; S.cand = r.candidates; S.candIdx = 0;
-  S.d = r.d; S.aligned = true; S.T = 0; S.manualMatch = false;
+  S.d = r.d; S.aligned = true; S.T = 0; S.manualMatch = false; S.matchConfirmed = false; $('matchOk').hidden = true; $('matchBtns').hidden = false;
   const sure = r.ratio >= 1.05;
   showAlignStatus(sure ? 'ok' : 'warn', sure ? 'Matched to the music' : 'Matched — please check it');
   autoLayout(); recompute(); seekAll(0); refreshSteps(); updateMatchView();
@@ -1649,7 +1681,7 @@ async function submit() {
 function updateControls() {
   $('exportBtn').hidden = !$('result').hidden;
   $('submitBtn').disabled = S.submitting || S.submitted;
-  const ready = S.aligned && !S.exporting && !!S.member && S.mirrorAnswered && !S.ownError;
+  const ready = S.aligned && S.matchConfirmed && !S.exporting && !!S.member && S.mirrorAnswered && !S.ownError;
   $('playBtn').disabled = !ready; $('scrub').disabled = !ready; $('exportBtn').disabled = !ready;
   for (const b of document.querySelectorAll('.adjust button, #mirrorChoice button, #startNudge button')) b.disabled = S.exporting;
   const btns = $('members').querySelectorAll('button');
@@ -1670,7 +1702,8 @@ $('mirrorChoice').addEventListener('click', (e) => {
 });
 $('startRange').addEventListener('input', (e) => setStart(+e.target.value));
 $('startNudge').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setStart(S.startAt + +b.dataset.s); });
-$('looksRight').addEventListener('click', () => scrollToStep(6));
+$('looksRight').addEventListener('click', () => { if (!S.aligned) return; confirmMatch(true); scrollToStep(6); });
+$('matchChange').addEventListener('click', () => { confirmMatch(false); invalidateResult(); });
 $('fixMatch').addEventListener('click', () => { $('fixBox').hidden = false; $('matchBtns').hidden = true; setStart(S.aligned ? coverage().from : 0); });
 $('applyFix').addEventListener('click', applyFix);
 $('startOver').addEventListener('click', startOver);
@@ -1749,7 +1782,7 @@ function startOver() {
   stopPlayback();
   if (S.url.p) URL.revokeObjectURL(S.url.p);
   S.file.p = null; S.url.p = null; S.env.p = null; S.chr.p = null; S.audio.p = null; S.dur.p = 0; S.aligned = false; S.ownError = false;
-  for (const v of [vid.p, $('frameVid'), $('stillP')]) { v.removeAttribute('src'); v.load(); v._primed = false; }
+  for (const v of [vid.p, $('frameVid'), $('stillP'), $('stillP2')]) { v.removeAttribute('src'); v.load(); v._primed = false; }
   $('fileP').value = ''; $('metaP').textContent = 'No video yet'; $('framer').hidden = true;
   S.crop = { z: 1, x: 0, y: 0 }; resetMirrorQuestion();
   status('', 'Waiting for your video', 'We match the two videos by the music.');
