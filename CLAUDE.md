@@ -8,6 +8,7 @@
 
 - 需求（用户 2026-11-04）：孩子把自己的练习视频和分配到的成员直拍上传，自动按音乐对齐，生成左右对比视频。手机端，越简单越好。
 - 第 2 版（用户 2026-11-04）：**整个网页英文**。成员视频预先放进 app（`assignments.json`），显示时镜像，页面强调已镜像。孩子流程：选作业 → 上传自己的视频（可拖动/缩放，有居中线）→ 问是否镜像，不是就自动镜像并告知 → 选成员 → 选开始时间 → 生成对比视频 → Download / Submit。保留所有调整功能。
+- 外观（用户 2026-11-04 定稿 S2）：Novae logo 配色（粉 #f08cc8 → 淡紫 #b49cf2 → 天蓝 #7cc4ff，颜色是从小图估的，有原图再校准），只用手机自带字体，顶部是深色“夜空”卡片 + 渐变流星（SVG）。顶部小字 “EDS Junior · NOVAE”。用户不要：太多颜色和字体、贴纸/可爱风、放射线。步骤标题用直接的指令，不用问句。不要绑定某一首歌（NEON 只是其中一个作业）。
 - Artifact 片段用 `python3 fancam-compare/tools/build_artifact.py index.html OUT` 生成（取 `artifact:*` 标记之间的内容）。
 - 决定：全部在手机浏览器里处理，视频不上传、不存 GitHub（未成年人隐私；GitHub 单文件 100 MB 限制）。
 - 在线版本是 Claude Artifact：https://claude.ai/artifact/VteLrSBvY2cCiXXc5VPPHC （声明了 `downloads` 能力，用来“保存到手机”）。Artifact 版本是 `index.html` 去掉 `<!doctype>…<body>` 外壳的片段；改完要同时更新 repo 和 Artifact。

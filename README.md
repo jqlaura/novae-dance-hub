@@ -4,7 +4,7 @@
 
 ## 直拍对比 `fancam-compare/`
 
-孩子在手机上打开网页（英文界面），按 6 步做出“自己的练习视频 + 分配成员的直拍”左右对比视频，音乐自动对齐。
+孩子在手机上打开网页（英文界面，Novae logo 配色 + 夜空流星头图），按 6 步做出“自己的练习视频 + 分配成员的直拍”左右对比视频，音乐自动对齐。
 
 - 在线版本（Claude Artifact，目前只有自己能打开）：https://claude.ai/artifact/VteLrSBvY2cCiXXc5VPPHC
 - 页面：[fancam-compare/index.html](fancam-compare/index.html)；作业和成员视频列表：[fancam-compare/assignments.json](fancam-compare/assignments.json)
@@ -14,10 +14,10 @@
 
 1. **Choose your assignment**：下拉选作业。页面强调“All member videos are already mirrored”。
 2. **Upload your practice video**：选视频后可以拖动、缩放，有居中辅助线。
-3. **Is your video mirrored?**：选 No 就自动镜像，并提示“we mirrored your video”。
-4. **Choose your member**：成员视频从 `assignments.json` 里的地址加载（`mirror: true` = 显示时左右翻转，所以放原版直拍就行）。
-5. **Where should it start?**：按成员视频的时间选开始点，带缩略图预览。
-6. **Check it, then create the video**：预览、调整（换对齐点、逐帧微调、镜像开关、左右/上下/互换、用谁的声音），生成后 **Download video** 或 **Submit**。
+3. **Check if your video is mirrored**：选 No 就自动镜像，并提示“we mirrored your video”。
+4. **Pick your member**：成员视频从 `assignments.json` 里的地址加载（`mirror: true` = 显示时左右翻转，所以放原版直拍就行）。
+5. **Pick a start time**：按成员视频的时间选开始点，带缩略图预览。
+6. **Preview, then create your video**：预览、调整（换对齐点、逐帧微调、镜像开关、左右/上下/互换、用谁的声音），生成后 **Download video** 或 **Submit**。
 
 ### 加一个作业 / 成员视频
 

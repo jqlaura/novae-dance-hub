@@ -7,146 +7,150 @@
 <!-- artifact:start -->
 <title>Fancam Compare</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
-/* Layout: one phone-width column of numbered step cards; each unlocks after the one before. Step 6 holds the stage, adjustments and export. */
+/* Layout: one phone-width column of numbered step cards; each unlocks after the one before. Step 6 holds the stage, adjustments and export.
+   Look: Novae logo colours (pink → lilac → sky) used sparingly, the phone's own font, a night-sky header card with a shooting star. */
 :root {
-  --bg: #eef0f4;
-  --surface: #ffffff;
-  --ink: #14161c;
-  --muted: #5b6270;
-  --line: #d8dce4;
-  --accent: #e3304a;      /* stage tally-light red */
-  --accent-ink: #ffffff;
-  --you: #2f4f8f;
-  --stage: #0b0c10;
-  --ok: #1f7a4d;
-  --ok-bg: #e3f3ea;
-  --warn: #a8640a;
-  --font-display: "Archivo", -apple-system, "Segoe UI", system-ui, sans-serif;
-  --font-ui: -apple-system, "Segoe UI", system-ui, sans-serif;
-  --font-num: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --bg: #f6f5f9; --surface: #ffffff; --ink: #1c1a26; --muted: #6a6778; --line: #e4e2ec;
+  --pink: #f08cc8; --lilac: #b49cf2; --sky: #7cc4ff;
+  --brand: linear-gradient(100deg, var(--pink), var(--lilac) 50%, var(--sky));
+  --accent: #8a72e8; --accent-soft: #efeafd; --accent-ink: #ffffff;
+  --ok: #5b45c9; --ok-bg: #efeafd; --warn: #9a5a00; --err: #c93a5b;
+  --stage: #0b0a10; --night: #16141f; --night-ink: #f3f2f8; --night-muted: #c9c6d6; --night-edge: transparent;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0e1015; --surface: #171a21; --ink: #eceef2; --muted: #9aa1ae; --line: #2a2f39;
-    --accent: #ff5a6e; --accent-ink: #14161c; --you: #8fb0f0; --stage: #000000; --ok: #4fc58a; --ok-bg: #16281f; --warn: #f0b04a;
-    color-scheme: dark;
+    --bg: #0f0e14; --surface: #1a1922; --ink: #f3f2f8; --muted: #a19eb0; --line: #2b2935;
+    --accent: #b49cf2; --accent-soft: #272238; --accent-ink: #15131c; --ok: #cbbcff; --ok-bg: #272238; --warn: #ffc24a; --err: #ff7a98;
+    --stage: #000000; --night-edge: #2b2935; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0e1015; --surface: #171a21; --ink: #eceef2; --muted: #9aa1ae; --line: #2a2f39;
-  --accent: #ff5a6e; --accent-ink: #14161c; --you: #8fb0f0; --stage: #000000; --ok: #4fc58a; --ok-bg: #16281f; --warn: #f0b04a;
-  color-scheme: dark;
+  --bg: #0f0e14; --surface: #1a1922; --ink: #f3f2f8; --muted: #a19eb0; --line: #2b2935;
+  --accent: #b49cf2; --accent-soft: #272238; --accent-ink: #15131c; --ok: #cbbcff; --ok-bg: #272238; --warn: #ffc24a; --err: #ff7a98;
+  --stage: #000000; --night-edge: #2b2935; color-scheme: dark;
 }
-body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 15px; line-height: 1.5; }
-.wrap { max-width: 560px; margin: 0 auto; padding-block: 20px 56px;
+body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 16px; line-height: 1.5; }
+.wrap { max-width: 560px; margin: 0 auto; padding-block: 16px 56px;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
   display: flex; flex-direction: column; gap: 14px; }
-.eyebrow { margin: 0; font: 700 11.5px var(--font-num); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
-h1 { font-family: var(--font-display); font-weight: 800; font-size: 30px; line-height: 1.1; margin: 4px 0 0; letter-spacing: -0.01em; text-wrap: balance; }
-h1 .rec { display: inline-block; width: 11px; height: 11px; border-radius: 50%; background: var(--accent); margin-right: 10px; vertical-align: middle; transform: translateY(-3px); }
-.lede { margin: 8px 0 0; color: var(--muted); max-width: 60ch; }
-.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.num { font-variant-numeric: tabular-nums; }
 
-.step { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; transition: opacity 0.2s; }
-.step.locked { opacity: 0.42; pointer-events: none; }
-.step h2 { font-family: var(--font-display); font-size: 18px; font-weight: 700; margin: 0; display: flex; gap: 10px; align-items: center; }
-.step .n { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--ink); color: var(--bg); display: grid; place-items: center; font: 700 13px var(--font-num); }
-.step.done .n { background: var(--ok); color: #fff; }
-.hint { margin: 0; font-size: 13.5px; color: var(--muted); }
-@media (prefers-reduced-motion: reduce) { .step { transition: none; } }
+/* header: night-sky card with a shooting star */
+header { position: relative; overflow: hidden; border-radius: 26px; padding: 100px 22px 24px; color: var(--night-ink); background-color: var(--night);
+  box-shadow: inset 0 0 0 1px var(--night-edge);
+  background-image: radial-gradient(1.2px 1.2px at 18% 30%, rgba(255,255,255,.7), transparent), radial-gradient(1px 1px at 38% 14%, rgba(255,255,255,.5), transparent),
+    radial-gradient(1px 1px at 64% 58%, rgba(255,255,255,.45), transparent), radial-gradient(1.3px 1.3px at 86% 88%, rgba(255,255,255,.6), transparent),
+    radial-gradient(1px 1px at 8% 76%, rgba(255,255,255,.4), transparent), radial-gradient(120% 90% at 100% 0%, rgba(180,156,242,.22), transparent 60%); }
+.comet { position: absolute; top: 4px; right: 2px; width: 230px; height: auto; pointer-events: none; overflow: visible; }
+.comet .tw { transform-box: fill-box; transform-origin: center; animation: twinkle 2.8s ease-in-out infinite; }
+.comet .tw2 { animation-delay: -1s; } .comet .tw3 { animation-delay: -1.9s; }
+@keyframes twinkle { 0%, 100% { opacity: 1; transform: scale(1) rotate(0deg); } 50% { opacity: 0.55; transform: scale(0.82) rotate(12deg); } }
+.eyebrow { position: absolute; top: 24px; left: 22px; margin: 0; font-size: 12.5px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+  color: transparent; background: var(--brand); -webkit-background-clip: text; background-clip: text; }
+h1 { position: relative; font-weight: 800; font-size: 42px; line-height: 1.02; margin: 0; letter-spacing: -0.03em; text-wrap: balance; }
+.lede { position: relative; margin: 10px 0 0; color: var(--night-muted); max-width: 60ch; font-size: 16px; }
 
-select, input[type=text] { font: inherit; font-size: 16px; color: var(--ink); background: var(--bg); border: 1.5px solid var(--line); border-radius: 12px; padding: 12px 14px; width: 100%; box-sizing: border-box; }
+/* step cards */
+.step { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; transition: opacity 0.2s; }
+.step:not(.locked):not(.done) { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.step.locked { opacity: 0.4; pointer-events: none; }
+.step h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.25; margin: 0; display: flex; gap: 10px; align-items: center; }
+.step .n { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-size: 14px; font-weight: 700; }
+.step:not(.locked):not(.done) .n { background: var(--accent); color: var(--accent-ink); }
+.hint { margin: 0; font-size: 14.5px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .step { transition: none; } .comet .tw { animation: none; } }
+
+select, input[type=text] { font: inherit; font-size: 16px; font-weight: 600; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; width: 100%; box-sizing: border-box; }
 select:focus-visible, input[type=text]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.mirror-badge { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; background: var(--ok-bg); color: var(--ok); font-weight: 700; font-size: 13.5px; border-radius: 999px; padding: 6px 12px; }
-.mirror-badge b { font-family: var(--font-num); }
+.mirror-badge { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; background: var(--accent-soft); color: var(--ok); font-weight: 700; font-size: 14px; border-radius: 999px; padding: 7px 13px; margin: 0; }
 
-.filebtn { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; align-self: flex-start; background: var(--ink); color: var(--bg); font-weight: 700; border-radius: 12px; padding: 12px 18px; cursor: pointer; }
+.filebtn { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; align-self: flex-start; background: var(--ink); color: var(--bg); font-weight: 700; border-radius: 999px; padding: 15px 24px; cursor: pointer; }
 .filebtn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
 .filebtn:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
-.filemeta { font-size: 13.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.link { align-self: flex-start; background: none; border: 0; padding: 0; color: var(--muted); font: inherit; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.filemeta { font-size: 14px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.link { align-self: flex-start; background: none; border: 0; padding: 0; color: var(--muted); font: inherit; font-size: 14.5px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .framer { display: flex; flex-direction: column; gap: 10px; align-items: center; }
-.frame { position: relative; width: min(100%, 240px); aspect-ratio: 9 / 16; max-width: 100%; background: #000; border-radius: 12px; overflow: hidden; touch-action: none; cursor: grab; }
+.frame { position: relative; width: min(100%, 240px); aspect-ratio: 9 / 16; max-width: 100%; background: #000; border-radius: 18px; overflow: hidden; touch-action: none; cursor: grab; }
 .frame video { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; }
 .guide { position: absolute; pointer-events: none; }
 .guide.v { left: 50%; top: 0; bottom: 0; border-left: 2px dashed rgba(255, 255, 255, 0.85); transform: translateX(-1px); }
 .guide.h { top: 50%; left: 42%; right: 42%; border-top: 2px solid rgba(255, 255, 255, 0.6); }
-.guide.tag { top: 8px; left: 50%; transform: translateX(-50%); font: 700 10.5px var(--font-num); letter-spacing: 0.1em; color: #fff; background: rgba(0, 0, 0, 0.5); padding: 2px 6px; border-radius: 4px; }
+.guide.tag { top: 8px; left: 50%; transform: translateX(-50%); font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; color: #fff; background: rgba(0, 0, 0, 0.5); padding: 2px 7px; border-radius: 999px; }
 .frame-ctl { display: flex; gap: 12px; align-items: center; width: 100%; max-width: 360px; }
-.frame-ctl label { font-size: 13.5px; font-weight: 600; }
-.frame-ctl input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
+.frame-ctl label { font-size: 14px; font-weight: 600; }
+.frame-ctl input[type=range] { flex: 1; min-width: 0; }
 
 .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.choice { border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 12px; padding: 14px 10px; font: inherit; font-weight: 600; cursor: pointer; text-align: center; }
-.choice[aria-pressed="true"] { border-color: var(--ink); background: var(--surface); box-shadow: inset 0 0 0 1px var(--ink); }
+.choice { border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 14px; padding: 15px 10px; font: inherit; font-weight: 600; cursor: pointer; text-align: center; }
+.choice[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .choice:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.notice { margin: 0; background: var(--ok-bg); color: var(--ok); border-radius: 10px; padding: 10px 12px; font-weight: 600; font-size: 14px; }
+.notice { margin: 0; background: var(--accent-soft); color: var(--ok); border-radius: 14px; padding: 11px 13px; font-weight: 600; font-size: 14.5px; }
 
 .members { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.members .choice { padding: 12px 6px; }
+.members .choice { padding: 13px 6px; }
 .members .choice:disabled { opacity: 0.4; cursor: default; }
-.members .choice small { display: block; font-weight: 400; font-size: 11.5px; color: var(--muted); }
+.members .choice small { display: block; font-weight: 400; font-size: 11.5px; color: inherit; opacity: 0.7; }
 
 .startpick { display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: center; }
-.startpick .thumb { width: 96px; aspect-ratio: 9 / 16; background: #000; border-radius: 10px; overflow: hidden; }
+.startpick .thumb { width: 96px; aspect-ratio: 9 / 16; background: #000; border-radius: 12px; overflow: hidden; }
 .startpick .thumb video { width: 100%; height: 100%; object-fit: contain; display: block; }
 .startpick .thumb.mirror video { transform: scaleX(-1); }
 .startctl { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.startctl .big { font-size: 26px; font-weight: 700; }
-.startctl input[type=range] { width: 100%; accent-color: var(--accent); }
+.startctl .big { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; }
+.startctl input[type=range] { width: 100%; }
+input[type=range] { accent-color: var(--accent); }
 
-.status { display: flex; gap: 10px; align-items: flex-start; background: var(--bg); border-radius: 12px; padding: 12px 14px; }
+.status { display: flex; gap: 10px; align-items: flex-start; background: var(--bg); border-radius: 14px; padding: 12px 14px; }
 .status .dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); margin-top: 7px; }
-.status.ok .dot { background: var(--ok); } .status.warn .dot { background: var(--warn); } .status.busy .dot { background: var(--accent); animation: blink 1s infinite; }
-.status.err .dot { background: var(--accent); }
+.status.ok .dot { background: var(--accent); } .status.warn .dot { background: var(--warn); } .status.busy .dot { background: var(--pink); animation: blink 1s infinite; }
+.status.err .dot { background: var(--err); }
 @keyframes blink { 50% { opacity: 0.2; } }
 @media (prefers-reduced-motion: reduce) { .status.busy .dot { animation: none; } }
 .status b { font-weight: 700; }
-.status small { display: block; color: var(--muted); font-size: 13px; }
+.status small { display: block; color: var(--muted); font-size: 13.5px; }
 
-.stage { background: var(--stage); border-radius: 14px; overflow: hidden; display: grid; gap: 2px; position: relative; max-width: 100%; }
+.stage { background: var(--stage); border-radius: 18px; overflow: hidden; display: grid; gap: 2px; position: relative; max-width: 100%; }
 .stage.lr { grid-template-columns: 1fr 1fr; aspect-ratio: 9 / 8; }
 .stage.tb { grid-template-rows: 1fr 1fr; aspect-ratio: 8 / 9; }
 .pane { position: relative; min-width: 0; min-height: 0; background: #000; overflow: hidden; }
 .pane video { width: 100%; height: 100%; object-fit: contain; display: block; }
-.pane .label { position: absolute; top: 8px; left: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; padding: 2px 8px; border-radius: 6px; color: #fff; z-index: 1; }
-.pane.p .label { background: #2f4f8f; } .pane.f .label { background: #e3304a; }
+.pane .label { position: absolute; top: 8px; left: 8px; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; color: #1c1a26; z-index: 1; }
+.pane.p .label { background: #ffffff; } .pane.f .label { background: #b49cf2; }
 .stage.swap .pane.p { order: 2; }
 
 .transport { display: flex; align-items: center; gap: 12px; }
-.play { flex: none; width: 48px; height: 48px; border-radius: 50%; border: 0; background: var(--ink); color: var(--bg); font-size: 18px; cursor: pointer; display: grid; place-items: center; }
+.play { flex: none; width: 56px; height: 56px; border-radius: 50%; border: 0; background: var(--ink); color: var(--bg); font-size: 18px; cursor: pointer; display: grid; place-items: center; }
 .play:disabled { opacity: 0.35; cursor: default; }
 .play:focus-visible, .btn:focus-visible, .seg button:focus-visible, .nudge button:focus-visible, input[type=range]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.transport input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
-.transport .time { flex: none; font-size: 13px; color: var(--muted); }
+.transport input[type=range] { flex: 1; min-width: 0; }
+.transport .time { flex: none; font-size: 13.5px; color: var(--muted); }
 
-details.adjust { border: 1px solid var(--line); border-radius: 12px; padding: 0 14px; }
-details.adjust summary { cursor: pointer; padding: 12px 0; font-weight: 600; }
+details.adjust { border: 1px solid var(--line); border-radius: 16px; padding: 0 14px; }
+details.adjust summary { cursor: pointer; padding: 13px 0; font-weight: 600; }
 .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
-.row .k { font-weight: 600; } .row .k small { display: block; font-weight: 400; color: var(--muted); font-size: 12.5px; }
-.seg { display: inline-flex; background: var(--bg); border-radius: 10px; padding: 3px; gap: 2px; }
-.seg button { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 14px; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
-.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.12); }
+.row .k { font-weight: 600; } .row .k small { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+.seg { display: inline-flex; background: var(--bg); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 14px; padding: 6px 13px; border-radius: 999px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .nudge { display: inline-flex; gap: 6px; flex-wrap: wrap; }
-.nudge button { border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 8px; padding: 6px 9px; font-family: var(--font-num); font-size: 13px; cursor: pointer; }
-.offset { font-size: 13px; color: var(--muted); width: 100%; }
+.nudge button { border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 999px; padding: 6px 11px; font: inherit; font-size: 13.5px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.offset { font-size: 13.5px; color: var(--muted); width: 100%; }
 
-.btn { border: 0; border-radius: 12px; padding: 14px 18px; font: inherit; font-weight: 700; font-size: 16px; cursor: pointer; background: var(--accent); color: var(--accent-ink); }
+.btn { border: 0; border-radius: 999px; padding: 17px 20px; font: inherit; font-weight: 700; font-size: 17px; cursor: pointer; background: var(--brand); color: #1c1a26; }
 .btn.dark { background: var(--ink); color: var(--bg); }
 .btn:disabled { opacity: 0.4; cursor: default; }
-.progress { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
-.progress i { display: block; height: 100%; width: 0%; background: var(--accent); }
+.progress { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.progress i { display: block; height: 100%; width: 0%; background: var(--brand); }
 .result { display: flex; flex-direction: column; gap: 12px; }
-.result video { width: 100%; max-width: 100%; border-radius: 12px; background: #000; }
+.result video { width: 100%; max-width: 100%; border-radius: 18px; background: #000; }
 .submit { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
-.submit h3 { margin: 0; font-family: var(--font-display); font-size: 16px; }
-.note { font-size: 13px; color: var(--muted); margin: 0; }
+.submit h3 { margin: 0; font-size: 17px; font-weight: 700; }
+.note { font-size: 13.5px; color: var(--muted); margin: 0; }
 canvas#rec { display: none; }
 </style>
 <!-- artifact:head-end -->
@@ -154,15 +158,34 @@ canvas#rec { display: none; }
 <body>
 <div class="wrap">
   <header>
-    <p class="eyebrow">Novae Dance</p>
-    <h1><span class="rec" aria-hidden="true"></span>Fancam Compare</h1>
+    <svg class="comet" viewBox="0 0 220 120" aria-hidden="true">
+      <defs>
+        <linearGradient id="cometFill" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#f08cc8"/><stop offset="0.5" stop-color="#b49cf2"/><stop offset="1" stop-color="#7cc4ff"/>
+        </linearGradient>
+        <linearGradient id="cometTail" gradientUnits="userSpaceOnUse" x1="40" y1="6" x2="176" y2="78">
+          <stop offset="0" stop-color="#f08cc8" stop-opacity="0"/><stop offset="0.55" stop-color="#f08cc8" stop-opacity="0.55"/><stop offset="1" stop-color="#b49cf2" stop-opacity="1"/>
+        </linearGradient>
+        <linearGradient id="cometTail2" gradientUnits="userSpaceOnUse" x1="80" y1="40" x2="176" y2="82">
+          <stop offset="0" stop-color="#7cc4ff" stop-opacity="0"/><stop offset="1" stop-color="#7cc4ff" stop-opacity="0.9"/>
+        </linearGradient>
+      </defs>
+      <polygon points="40,6 178,74 172,84" fill="url(#cometTail)"/>
+      <polygon points="80,42 176,78 172,85" fill="url(#cometTail2)"/>
+      <g class="tw tw1"><path transform="translate(150 52) scale(0.52)" d="M50 0 C54 38 62 46 100 50 C62 54 54 62 50 100 C46 62 38 54 0 50 C38 46 46 38 50 0Z" fill="url(#cometFill)"/></g>
+      <g class="tw tw2"><path transform="translate(196 18) scale(0.13)" d="M50 0 C54 38 62 46 100 50 C62 54 54 62 50 100 C46 62 38 54 0 50 C38 46 46 38 50 0Z" fill="url(#cometFill)"/></g>
+      <g class="tw tw3"><path transform="translate(118 100) scale(0.09)" d="M50 0 C54 38 62 46 100 50 C62 54 54 62 50 100 C46 62 38 54 0 50 C38 46 46 38 50 0Z" fill="url(#cometFill)"/></g>
+      <circle cx="206" cy="66" r="1.6" fill="#b49cf2"/><circle cx="104" cy="16" r="1.3" fill="#7cc4ff"/>
+    </svg>
+    <p class="eyebrow">EDS Junior · NOVAE</p>
+    <h1>Fancam Compare</h1>
     <p class="lede">Put your practice video next to your member's fancam, matched to the music. Everything runs on your phone.</p>
   </header>
 
   <section class="step" id="step1">
     <h2><span class="n">1</span>Choose your assignment</h2>
     <select id="assignment" aria-label="Assignment"><option value="">Select an assignment…</option></select>
-    <p class="mirror-badge"><b>⇆</b> All member videos are already mirrored</p>
+    <p class="mirror-badge"><span aria-hidden="true">⇆</span> All member videos are already mirrored</p>
     <p class="hint">They're flipped left–right, so they look like dancing in front of a mirror.</p>
   </section>
 
@@ -170,7 +193,7 @@ canvas#rec { display: none; }
     <h2><span class="n">2</span>Upload your practice video</h2>
     <label class="filebtn">Choose video<input id="fileP" type="file" accept="video/*"></label>
     <span class="filemeta" id="metaP">No video yet</span>
-    <button class="link" id="sampleOwn" type="button" hidden>No video? Use a sample practice video</button>
+    <button class="link" id="sampleOwn" type="button" hidden>Use a sample practice video</button>
     <div class="framer" id="framer" hidden>
       <div class="frame" id="frame">
         <video id="frameVid" muted playsinline loop preload="auto"></video>
@@ -186,8 +209,8 @@ canvas#rec { display: none; }
   </section>
 
   <section class="step locked" id="step3">
-    <h2><span class="n">3</span>Is your video mirrored?</h2>
-    <p class="hint">Not sure? Find a moment where you raise your right hand. If it's on the right side of the screen, your video is mirrored.</p>
+    <h2><span class="n">3</span>Check if your video is mirrored</h2>
+    <p class="hint">Find a moment where you raise your right hand. If it's on the right side of the screen, your video is mirrored.</p>
     <div class="choices" id="mirrorChoice">
       <button class="choice" type="button" data-v="yes" aria-pressed="false">Yes, it's mirrored</button>
       <button class="choice" type="button" data-v="no" aria-pressed="false">No, it isn't</button>
@@ -196,13 +219,13 @@ canvas#rec { display: none; }
   </section>
 
   <section class="step locked" id="step4">
-    <h2><span class="n">4</span>Choose your member</h2>
+    <h2><span class="n">4</span>Pick your member</h2>
     <div class="members" id="members"></div>
     <p class="hint" id="memberHint">Pick the member you were assigned.</p>
   </section>
 
   <section class="step locked" id="step5">
-    <h2><span class="n">5</span>Where should it start?</h2>
+    <h2><span class="n">5</span>Pick a start time</h2>
     <div class="startpick">
       <div class="thumb mirror" id="startThumb"><video id="startVid" muted playsinline preload="auto"></video></div>
       <div class="startctl">
@@ -218,12 +241,12 @@ canvas#rec { display: none; }
   </section>
 
   <section class="step locked" id="step6">
-    <h2><span class="n">6</span>Check it, then create the video</h2>
+    <h2><span class="n">6</span>Preview, then create your video</h2>
     <div class="status" id="status" role="status" aria-live="polite">
       <span class="dot"></span>
       <div><b id="statusMain">Waiting for your video and member</b><small id="statusSub">We match the two videos by the music.</small></div>
     </div>
-    <button class="link" id="nextCand" type="button" hidden>Doesn't line up? Try another match</button>
+    <button class="link" id="nextCand" type="button" hidden>Try another match</button>
 
     <div class="stage lr" id="stage">
       <div class="pane p" id="paneP"><video id="vidP" playsinline muted preload="auto"></video><span class="label">You</span></div>
@@ -238,7 +261,7 @@ canvas#rec { display: none; }
     <details class="adjust">
       <summary>Adjust</summary>
       <div class="row">
-        <span class="k">Off by a little?<small>If you move before the member, tap +. If you're late, tap −.</small></span>
+        <span class="k">Fine-tune the timing<small>If you move before the member, tap +. If you're late, tap −.</small></span>
         <div class="nudge" id="nudge">
           <button type="button" data-d="-0.1">−0.1s</button><button type="button" data-d="-0.0333">−1 frame</button>
           <button type="button" data-d="0.0333">+1 frame</button><button type="button" data-d="0.1">+0.1s</button>
@@ -735,7 +758,7 @@ function runAlign() {
 function showAlignStatus(kind, main) {
   status(kind, main, "Tap ▶ to check. If the moves don't line up, try another match or open Adjust.");
   $('nextCand').hidden = !(S.cand && S.cand.length > 1);
-  if (S.cand) $('nextCand').textContent = `Doesn't line up? Try another match (${S.candIdx + 1}/${S.cand.length})`;
+  if (S.cand) $('nextCand').textContent = `Try another match (${S.candIdx + 1}/${S.cand.length})`;
 }
 
 // ---------- timeline ----------
@@ -858,9 +881,9 @@ function drawPane(k, box) {
   const label = k === 'p' ? 'You' : (S.member ? S.member.name : 'Member');
   g.font = '700 26px ' + getComputedStyle(document.body).fontFamily;
   const tw = g.measureText(label).width;
-  g.fillStyle = k === 'p' ? '#2f4f8f' : '#e3304a';
-  g.fillRect(box[0] + 14, box[1] + 14, tw + 20, 38);
-  g.fillStyle = '#fff'; g.fillText(label, box[0] + 24, box[1] + 43);
+  g.fillStyle = k === 'p' ? '#ffffff' : '#b49cf2';
+  g.beginPath(); (g.roundRect ? g.roundRect(box[0] + 14, box[1] + 14, tw + 28, 38, 19) : g.rect(box[0] + 14, box[1] + 14, tw + 28, 38)); g.fill();
+  g.fillStyle = '#1c1a26'; g.fillText(label, box[0] + 28, box[1] + 43);
 }
 function drawFrame() {
   const [W, H] = [cv.width, cv.height];
