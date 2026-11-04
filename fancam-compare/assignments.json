@@ -1,6 +1,6 @@
 {
   "note": "One entry per assignment. member.video is a path, a URL, or a Google Drive share link (or drive:<FILE_ID>). mirror: true flips it left-right when shown, so the coach can upload the original fancam. submitUrl = the Apps Script web app URL (ends in /exec). driveApiKey = the Google API key that reads Drive videos.",
-  "submitUrl": "",
+  "submitUrl": "https://script.google.com/macros/s/AKfycbwMuveUoispxO7VC2U3hBn-mdtZw_ZshCbsnuraMPtbw_VInR36FUjXwEo-aOOLzKNR/exec",
   "driveApiKey": "AIzaSyCfg9c-_eppB5P2a_EJSkS4pTmW5jznlDs",
   "assignments": [
     {
