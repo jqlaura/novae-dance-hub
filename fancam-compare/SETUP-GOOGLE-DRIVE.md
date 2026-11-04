@@ -1,12 +1,12 @@
 # 设置 Google Drive（教练做一次就行）
 
-一共四部分（A–C 是 Google，D 是 GitHub），全部免费，大约 25 分钟。都用**同一个 Google 账号**做。
+一共四部分（A–C 是 Google，D 是 GitHub），全部免费。都用**同一个 Google 账号**做。
 
 | 部分 | 做什么 | 做完给我什么 |
 |---|---|---|
-| A | 把成员直拍放进 Drive，网页从这里读 | 9 个视频的分享链接 |
+| A | 把成员直拍放进 Drive，网页从这里读 | 文件夹链接 |
 | B | 建一个 API 密钥，让网页能读这些视频 | 这个密钥（一串字母数字） |
-| C | 建一个“收作业”的小程序，孩子的视频存进你的私人文件夹 | 一个以 `/exec` 结尾的网址 |
+| C | 建一个“收作业”的小程序，孩子的视频存进你的私人文件夹（Claude 自动部署，你点几下授权） | 队伍口令 |
 
 谁能看到什么：
 - **成员直拍**：知道链接的人能看（本来就是 YouTube 上的公开视频）。
@@ -21,7 +21,7 @@
 2. 打开这个文件夹，把 Mac 上 `下载/neon-720` 里的 9 个视频拖进去，等上传完成。
 3. 回到上一层，在 `Fancams` 文件夹上点右键 → **Share（共享）→ Share**。
 4. 在 **General access（一般访问权限）** 那里，把 “Restricted（受限）” 改成 **Anyone with the link（知道链接的任何人）**，右边保持 **Viewer（查看者）**，点 **Done（完成）**。
-5. 进到文件夹里，每个视频点右键 → **Share → Copy link（复制链接）**，把 9 个链接贴给我（告诉我每个是谁），或者自己填进 `assignments.json` 对应成员的 `"video"` 里。
+5. 把**文件夹**的链接发给 Claude 就行（文件名用 `NEON_<成员>.mp4` 这种格式，它会按名字自动对上每个成员）。
 
 > 以后加新歌也一样：新建一个文件夹，传视频，设成“知道链接的任何人可以查看”，复制链接。
 
@@ -38,33 +38,23 @@
 
 > 有了这两个限制，别人就算拿到这个密钥，也只能在你的网页上用来读 Drive 视频，做不了别的。
 
-## C. 建“收作业”小程序（Apps Script）
+## C. 建“收作业”小程序（Apps Script）— 大部分由 Claude 自动完成
 
-1. 打开 <https://script.google.com> → 左上角 **New project（新项目）**。
-2. 点左上角 “Untitled project”，改名为 `Fancam Submit`。
-3. 编辑区里已经有几行字（`function myFunction()…`），**全部删掉**。
-4. 打开这个仓库里的 [`apps-script/Code.gs`](apps-script/Code.gs)，**全部复制**，粘贴进去。
-5. 找到最上面这一行，把 `change-me` 改成你想要的队伍口令（比如 `stars2026`，别用孩子的名字或生日）：
-   ```js
-   const TEAM_CODE = 'change-me';
-   ```
-6. 按 ⌘S 保存。
-7. 上方函数下拉框选 **setup**，点 **▶ Run（运行）**。
-   - 会弹出 “Authorization required”，点 **Review permissions**，选你的账号。
-   - 会看到 “Google hasn't verified this app”：点左下角 **Advanced（高级）** → **Go to Fancam Submit (unsafe)**。这是你自己写的程序，所以 Google 没审核过，没关系。
-   - 点 **Allow（允许）**。
-   - 下方日志会出现 `Submissions folder: https://drive.google.com/...`，这就是收作业的文件夹。
-8. 右上角 **Deploy（部署）→ New deployment（新建部署）**：
-   - 点 “Select type” 旁边的齿轮 ⚙ → **Web app**。
-   - **Execute as（执行身份）**：**Me（你的邮箱）**
-   - **Who has access（谁可以访问）**：**Anyone（任何人）**
-   - 点 **Deploy**，复制 **Web app URL**（`https://script.google.com/macros/s/…/exec`），发给我。
+小程序的代码在 [`apps-script/Code.gs`](apps-script/Code.gs)。Claude 用 Google 官方的命令行工具 **clasp** 在你的账号里建项目、上传代码、部署；你只需要点三下：
 
-> “Anyone” 的意思是孩子不用登录 Google 就能交作业；但没有队伍口令，什么都传不进来，也看不到任何东西。
+1. **打开 Apps Script API**：打开 <https://script.google.com/home/usersettings>，把 **Google Apps Script API** 切到 **On**。
+2. **给 clasp 授权**：Claude 运行 `clasp login`，你的浏览器会弹出 Google 登录页 → 选你的账号 → **Allow**。（如果提示 “Google hasn't verified this app”，点 **Continue**。clasp 是 Google 官方的开源工具。）
+3. **定一个队伍口令**告诉 Claude（比如 `stars2026`，别用孩子的名字或生日）。
+
+然后 Claude 会：建项目 `Novae Dance Hub — Submit` → 上传代码（只在上传的那一份里填口令，仓库里没有）→ 部署成网页应用（以你的身份运行，任何人可以访问）→ 把 `/exec` 网址填进 `assignments.json`。
+
+4. **允许它存文件到你的 Drive**（Google 规定这一步必须本人点）：Claude 会给你一个编辑器链接。打开后，上方函数下拉框选 **setup** → 点 **▶ Run** → **Review permissions** → 选你的账号 → 看到 “Google hasn't verified this app” 就点 **Advanced → Go to … (unsafe)** → **Allow**。这是你自己的程序，所以 Google 没审核过，没关系。下方日志会出现 `Submissions folder: https://drive.google.com/...`，这就是收作业的文件夹。
+
+> “任何人可以访问”的意思是孩子不用登录 Google 就能交作业；但没有队伍口令，什么都传不进来，也看不到任何东西。
 
 ### 以后要改口令
 
-改 `TEAM_CODE` → ⌘S 保存 → **Deploy → Manage deployments** → 点铅笔 ✏ → **Version** 选 **New version** → **Deploy**。网址不变。
+告诉 Claude 新口令，它会重新上传并更新部署，网址不变。（自己改也可以：在编辑器里改最上面的 `TEAM_CODE` → ⌘S → **Deploy → Manage deployments** → ✏ → **Version: New version** → **Deploy**。）
 
 ---
 
@@ -81,7 +71,7 @@
 
 ## 做完以后
 
-- 把 9 个链接、API 密钥、`/exec` 网址发给我，我填进 `assignments.json`。
+- 把 Drive 文件夹链接、API 密钥、队伍口令发给 Claude，它会填进 `assignments.json` 并部署 C。
 - 把队伍口令告诉孩子（口令不会出现在网页或仓库里）。
 - 孩子交的视频会出现在 Drive 的 `Fancam Submissions/<作业名>/`，文件名是 `名字 · 成员 · 日期 时间.mp4`。
 
