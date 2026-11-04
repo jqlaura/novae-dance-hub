@@ -8,7 +8,8 @@
 
 - 在线版本（Claude Artifact，目前只有自己能打开）：https://claude.ai/artifact/VteLrSBvY2cCiXXc5VPPHC
 - 页面：[fancam-compare/index.html](fancam-compare/index.html)；作业和成员视频列表：[fancam-compare/assignments.json](fancam-compare/assignments.json)
-- 处理都在手机浏览器里完成；视频只有在“Submit”时才会上传（上传还没接好）。
+- 处理都在手机浏览器里完成；视频只有在“Submit”时才会上传：分块（每块 8 MB）传给 Google Apps Script（[`apps-script/Code.gs`](fancam-compare/apps-script/Code.gs)），它检查队伍口令，再存进教练 Drive 里的私人文件夹 `Fancam Submissions/<作业名>/`。
+- 成员直拍放在教练的 Google Drive（知道链接可查看），`assignments.json` 里直接贴 Drive 分享链接，网页用 Drive API + API 密钥读取。设置步骤见 [SETUP-GOOGLE-DRIVE.md](fancam-compare/SETUP-GOOGLE-DRIVE.md)。
 
 ### 孩子的流程
 
@@ -21,7 +22,7 @@
 
 ### 加一个作业 / 成员视频
 
-在 `assignments.json` 里加一项：`{ "id", "title", "members": [{ "name", "video": "地址", "mirror": true }] }`。`video` 为 `null` 的成员显示“video not added yet”。`demo: true` 的作业会显示“Use a sample practice video”。
+在 `assignments.json` 里加一项：`{ "id", "title", "members": [{ "name", "video": "地址或 Drive 分享链接", "mirror": true }] }`。最上面的 `submitUrl`（Apps Script 的 `/exec` 网址）和 `driveApiKey`（API 密钥）所有作业共用。`video` 为 `null` 的成员显示“video not added yet”。`demo: true` 的作业会显示“Use a sample practice video”。
 
 ### 原理
 

@@ -294,8 +294,10 @@ canvas#rec { display: none; }
       <div class="submit">
         <h3>Submit your assignment</h3>
         <input id="kidName" type="text" placeholder="Your name" autocomplete="name" aria-label="Your name">
+        <input id="teamCode" type="text" placeholder="Team code (ask your coach)" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Team code">
         <button class="btn" id="submitBtn" type="button">Submit</button>
-        <p class="note" id="submitNote"></p>
+        <div class="progress" id="upProg" hidden><i id="upBar"></i></div>
+        <p class="note" id="submitNote" aria-live="polite"></p>
       </div>
     </div>
   </section>
@@ -318,7 +320,7 @@ const S = {
   crop: { z: 1, x: 0, y: 0 }, mirror: false, mirrorAnswered: false, mirrorF: true,
   startAt: 0, layout: 'lr', swap: false, audioFrom: 'f',
   playing: false, T: 0, L: 0, t0: 0, src: null, exporting: false,
-  outBlob: null, outExt: 'mp4',
+  outBlob: null, outExt: 'mp4', cfg: {}, submitting: false, submitted: false,
 };
 let actx = null;
 const getCtx = () => (actx ||= new (window.AudioContext || window.webkitAudioContext)());
@@ -577,7 +579,7 @@ async function loadAssignments() {
   const sel = $('assignment');
   try {
     const r = await fetch('assignments.json', { cache: 'no-cache' });
-    S.assignments = (await r.json()).assignments || [];
+    S.cfg = await r.json(); S.assignments = S.cfg.assignments || [];
   } catch (e) {
     sel.options[0].textContent = "Couldn't load assignments. Reload the page.";
     return;
@@ -682,6 +684,14 @@ function resetMember() {
   $('labelF').textContent = 'Member';
   status('', 'Waiting for your video and member', 'We match the two videos by the music.');
 }
+// A member video can be a normal path/URL, or a Google Drive file: paste its share link
+// (https://drive.google.com/file/d/<ID>/view…) or write drive:<ID>. Drive files are read through
+// the Drive API with the coach's API key (driveApiKey in assignments.json).
+function videoUrl(v) {
+  const m = /^drive:([\w-]+)$/.exec(v) || /drive\.google\.com\/.*(?:\/d\/|[?&]id=)([\w-]{20,})/.exec(v);
+  if (!m) return v;
+  return `https://www.googleapis.com/drive/v3/files/${m[1]}?alt=media&key=${encodeURIComponent(S.cfg.driveApiKey || '')}`;
+}
 async function fetchWithProgress(url, onp) {
   const res = await fetch(url); if (!res.ok) throw new Error('HTTP ' + res.status);
   const total = +res.headers.get('content-length') || 0;
@@ -701,7 +711,7 @@ async function chooseMember(m) {
   try {
     let c = S.memberCache[m.video];
     if (!c) {
-      const blob = await fetchWithProgress(m.video, (p) => { if (token === S.loadToken) hint.textContent = `Loading ${m.name}'s video… ${Math.round(p * 100)}%`; });
+      const blob = await fetchWithProgress(videoUrl(m.video), (p) => { if (token === S.loadToken) hint.textContent = `Loading ${m.name}'s video… ${Math.round(p * 100)}%`; });
       if (token === S.loadToken) hint.textContent = `Reading ${m.name}'s music…`;
       const { ab } = await decodeVideoAudio(blob);
       c = S.memberCache[m.video] = { url: URL.createObjectURL(blob), ab, env: onsetEnvelope(await toMono(ab)) };
@@ -905,7 +915,7 @@ async function startExport() {
   const dest = ctx.createMediaStreamDestination();
   const stream = new MediaStream([...cv.captureStream(30).getVideoTracks(), ...dest.stream.getAudioTracks()]);
   chunks = [];
-  rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 5_000_000 });
+  rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 2_500_000 });
   rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
   rec.onstop = onRecorded;
   S.exporting = true; S.T = 0; updateControls();
@@ -936,6 +946,7 @@ function onRecorded() {
   S.outBlob = new Blob(chunks, { type: chunks[0]?.type || (S.outExt === 'mp4' ? 'video/mp4' : 'video/webm') });
   $('outVid').src = URL.createObjectURL(S.outBlob);
   $('exporting').hidden = true; $('result').hidden = false; $('saveNote').textContent = ''; $('submitNote').textContent = '';
+  S.submitted = false; $('submitBtn').textContent = 'Submit'; $('upProg').hidden = true;
   status('ok', 'Your comparison video is ready', (S.outBlob.size / 1048576).toFixed(1) + ' MB. Watch it below, then download or submit it.');
   updateControls();
   $('result').scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
@@ -957,13 +968,58 @@ async function save() {
   const a = document.createElement('a'); a.href = $('outVid').src; a.download = name; document.body.appendChild(a); a.click(); a.remove();
   $('saveNote').textContent = "If nothing happened, tap ⋯ on the video above and save it from there.";
 }
-function submit() {
-  if (!$('kidName').value.trim()) { $('submitNote').textContent = 'Type your name first.'; $('kidName').focus(); return; }
-  $('submitNote').textContent = "Submitting isn't connected yet. For now, tap Download video and send it to your coach.";
+// ---------- submit: upload the finished video to the coach's Google Drive ----------
+// The page talks to a Google Apps Script web app (see apps-script/Code.gs). The video goes up in
+// 8 MB pieces; the script checks the team code and puts the pieces together in the coach's Drive.
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+async function callScript(body) {
+  const r = await fetch(S.cfg.submitUrl, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+const toBase64 = (blob) => new Promise((res, rej) => {
+  const fr = new FileReader();
+  fr.onload = () => res(String(fr.result).slice(String(fr.result).indexOf(',') + 1));
+  fr.onerror = () => rej(fr.error); fr.readAsDataURL(blob);
+});
+async function submit() {
+  const note = $('submitNote'), name = $('kidName').value.trim(), code = $('teamCode').value.trim();
+  if (!S.outBlob || S.submitting || S.submitted) return;
+  if (!name) { note.textContent = 'Type your name first.'; $('kidName').focus(); return; }
+  if (!S.cfg.submitUrl) { note.textContent = "Submitting isn't set up yet. Tap Download video and send it to your coach."; return; }
+  if (!code) { note.textContent = 'Type the team code first.'; $('teamCode').focus(); return; }
+  try { localStorage.setItem('fancam.name', name); localStorage.setItem('fancam.code', code); } catch (e) {}
+  const blob = S.outBlob, total = blob.size, bar = $('upBar');
+  S.submitting = true; updateControls();
+  $('upProg').hidden = false; bar.style.width = '0%'; note.textContent = 'Starting the upload…';
+  try {
+    const st = await callScript({ action: 'start', passcode: code, name, assignment: S.assign && S.assign.title,
+      member: S.member && S.member.name, size: total, mime: blob.type || 'video/' + S.outExt });
+    if (!st.ok) { const e = new Error(st.error || 'upload refused'); e.code = st.code; throw e; }
+    const step = st.chunk || 8 * 1048576;
+    for (let off = 0; off < total;) {
+      const data = await toBase64(blob.slice(off, Math.min(off + step, total)));
+      let r = null;
+      for (let tries = 1; ; tries++) {
+        try { r = await callScript({ action: 'chunk', id: st.id, offset: off, data }); if (r.ok) break; throw new Error(r.error || 'upload failed'); }
+        catch (e) { if (tries >= 3) throw e; await wait(2000 * tries); }
+      }
+      off = r.done ? total : (typeof r.next === 'number' ? r.next : off + step);
+      bar.style.width = (100 * off / total).toFixed(1) + '%';
+      note.textContent = r.done ? '' : `Uploading… ${Math.round(100 * off / total)}% (keep this page open)`;
+    }
+    S.submitted = true; $('submitBtn').textContent = 'Submitted ✓';
+    note.textContent = 'Submitted! Your coach has your video.';
+  } catch (e) {
+    console.error(e); $('upProg').hidden = true;
+    note.textContent = e.code === 'passcode' ? "That team code isn't right. Check it with your coach."
+      : "The upload didn't finish (" + (e.message || e) + "). Check your internet and tap Submit again.";
+  } finally { S.submitting = false; updateControls(); }
 }
 
 // ---------- controls ----------
 function updateControls() {
+  $('submitBtn').disabled = S.submitting || S.submitted;
   const ready = S.aligned && !S.exporting && !!S.member && S.mirrorAnswered && !S.ownError;
   $('playBtn').disabled = !ready; $('scrub').disabled = !ready; $('exportBtn').disabled = !ready;
   for (const b of document.querySelectorAll('.adjust button, #mirrorChoice button, #startNudge button')) b.disabled = S.exporting;
@@ -1015,6 +1071,7 @@ $('saveBtn').addEventListener('click', save);
 $('submitBtn').addEventListener('click', submit);
 
 window.__dance = S; S._t = { align, decodeVideoAudio, decode, onsetEnvelope, toMono }; // for testing
+try { $('kidName').value = localStorage.getItem('fancam.name') || ''; $('teamCode').value = localStorage.getItem('fancam.code') || ''; } catch (e) {}
 applyTransforms(); refreshSteps(); loadAssignments();
 })();
 </script>

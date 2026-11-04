@@ -1,5 +1,7 @@
 {
-  "note": "One entry per assignment. member.video is a path or URL to that member's fancam. mirror: true flips it left-right when shown, so the coach can upload the original fancam.",
+  "note": "One entry per assignment. member.video is a path, a URL, or a Google Drive share link (or drive:<FILE_ID>). mirror: true flips it left-right when shown, so the coach can upload the original fancam. submitUrl = the Apps Script web app URL (ends in /exec). driveApiKey = the Google API key that reads Drive videos.",
+  "submitUrl": "",
+  "driveApiKey": "",
   "assignments": [
     {
       "id": "a2o-lite-neon",
