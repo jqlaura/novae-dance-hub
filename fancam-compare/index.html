@@ -848,10 +848,10 @@ function updateTime() {
 // Seeking is the last resort: on a phone each seek freezes the picture for a moment.
 const other = (k) => (k === 'p' ? 'f' : 'p');
 function follow(v, target, now) {
-  if (v.seeking) return;
+  if (v.seeking && now - (v._lastSeek || 0) < 1500) return;      // a jump that hangs (iPhone) gets retried
   const drift = v.currentTime - target;
   if (Math.abs(drift) > 0.8 && now - (v._lastSeek || 0) > 2500) {
-    v.currentTime = Math.max(0, target + 0.2);       // land a bit ahead: the seek itself takes time
+    v.currentTime = Math.max(0, target + Math.min(1.5, v._seekCost || 0.2));   // land ahead by what a jump takes on this phone
     v._lastSeek = now; return;
   }
   const a = Math.abs(drift);
@@ -860,9 +860,43 @@ function follow(v, target, now) {
     : (a < 0.03 ? 1 : drift > 0 ? (a > 0.2 ? 0.9 : 0.96) : (a > 0.2 ? 1.1 : 1.04));          // preview: few, small changes
   if (v.playbackRate !== rate) v.playbackRate = rate;
 }
-function play() {                     // called straight from the tap, so the phone allows sound
-  if (!S.aligned || S.exporting) return;
-  if (S.T >= S.L - 0.05) seekAll(0);
+// iPhone Safari only really loads a video once it plays, and it drops a jump (currentTime = …) made
+// before that, so both videos would start from 0:00. So: get both moving (muted), pause, jump,
+// wait until each one is really at its spot (retry if not), and only then start.
+for (const k of ['p', 'f']) vid[k].addEventListener('seeked', function () { if (this._lastSeek) this._seekCost = Math.max(0.05, Math.min(1.5, (performance.now() - this._lastSeek) / 1000)); });
+const onceEv = (v, ev, ms) => new Promise((r) => {
+  const f = () => { clearTimeout(t); r(true); }, t = setTimeout(() => { v.removeEventListener(ev, f); r(false); }, ms);
+  v.addEventListener(ev, f, { once: true });
+});
+function unlockVideos() {             // call inside the tap: lets the phone play these videos later
+  for (const k of ['p', 'f']) { const v = vid[k]; v.muted = true; if (v.paused) { const pr = v.play(); if (pr && pr.catch) pr.catch(() => {}); } }
+}
+async function lineUp(T) {
+  const s = starts(), at = (k) => Math.max(0, Math.min(s[k] + T, (vid[k].duration || 1e9) - 0.05));
+  await Promise.all(['p', 'f'].map(async (k) => {
+    const v = vid[k]; v.muted = true;
+    if (!v._primed) { if (v.paused) v.play().catch(() => {}); if (v.readyState < 3) await onceEv(v, 'playing', 4000); v._primed = true; }
+    v.pause(); v.playbackRate = 1;
+  }));
+  // always jump, even if it already says it's there: Safari keeps an earlier jump (made before the
+  // video loaded) and does it later, sending the video back to 0:00 a second into playback
+  for (let i = 0; i < 4; i++) {
+    await Promise.all(['p', 'f'].map(async (k) => {
+      const v = vid[k]; if (i > 0 && !v.seeking && Math.abs(v.currentTime - at(k)) < 0.04) return;
+      const pr = onceEv(v, 'seeked', 3000); v.currentTime = at(k) + (i === 0 && Math.abs(v.currentTime - at(k)) < 0.001 ? 0.001 : 0); v._lastSeek = performance.now(); await pr;
+    }));
+    if (['p', 'f'].every((k) => !vid[k].seeking && Math.abs(vid[k].currentTime - at(k)) < 0.15)) return true;
+  }
+  return false;
+}
+async function play() {               // called straight from the tap
+  if (!S.aligned || S.exporting || S.lining) return;
+  if (S.T >= S.L - 0.05) S.T = 0;
+  unlockVideos();
+  S.lining = true; setPlayBtn(true);
+  await lineUp(S.T);
+  S.lining = false;
+  if (S.exporting) return;
   const m = vid[S.audioFrom], sl = vid[other(S.audioFrom)];
   sl.muted = true; m.muted = false; m.volume = 1; m.playbackRate = 1; sl.playbackRate = 1;
   const pm = m.play(); sl.play().catch(() => {});
@@ -955,6 +989,7 @@ async function startExport() {
   const ctx = getCtx();
   try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}   // play through the silent switch
   const resumed = ctx.state !== 'running' ? ctx.resume() : null;      // must start inside the tap
+  unlockVideos();
   [cv.width, cv.height] = canvasSize();
   S.outExt = mime.includes('mp4') ? 'mp4' : 'webm';
   const dest = ctx.createMediaStreamDestination();
@@ -968,12 +1003,15 @@ async function startExport() {
   status('busy', 'Creating your comparison video…', `It records in real time: ${fmt(S.L)} of video takes ${fmt(S.L)}.`);
   if (resumed) await resumed;
   try { wake = await navigator.wakeLock?.request('screen'); } catch (e) {}
-  seekAll(0);
+  status('busy', 'Lining up the videos…');
+  const ok = await lineUp(0);
+  if (!ok) console.warn('lineUp: videos not exactly at their start');
+  status('busy', 'Creating your comparison video…', `It records in real time: ${fmt(S.L)} of video takes ${fmt(S.L)}.`);
+  S.T = 0; updateTime();
   // start recording first and keep feeding it pictures, so sound and picture share one starting point
   let preroll = true; drawFrame(); rec.start(500);
   (function feed() { if (!preroll) return; drawFrame(); requestAnimationFrame(feed); })();
   const once = (v, ev) => new Promise((r) => { v.addEventListener(ev, r, { once: true }); setTimeout(r, 4000); });
-  await Promise.all(['p', 'f'].map((k) => (vid[k].seeking ? once(vid[k], 'seeked') : null)));
   // get both videos actually moving first, then start the sound exactly where the audio-source video is
   for (const k of ['p', 'f']) { vid[k].muted = true; vid[k].playbackRate = 1; }
   await Promise.all(['p', 'f'].map((k) => { const pr = once(vid[k], 'playing'); vid[k].play().catch(() => {}); return pr; }));
@@ -1087,7 +1125,7 @@ $('mirrorChoice').addEventListener('click', (e) => {
 });
 $('startRange').addEventListener('input', (e) => setStart(+e.target.value, true));
 $('startNudge').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setStart(S.startAt + +b.dataset.s, true); });
-$('playBtn').addEventListener('click', () => (S.playing ? stopPlayback() : play()));
+$('playBtn').addEventListener('click', () => (S.playing ? stopPlayback() : play()));   // play() ignores taps while lining up
 $('scrub').addEventListener('input', (e) => { scrubbing = true; const was = S.playing; stopPlayback(); seekAll(S.L * e.target.value / 1000); scrubbing = false; if (was) play(); });
 $('segMirror').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; S.mirrorAnswered = true; setMirror(b.dataset.v === '1', true); refreshSteps(); });
 $('segLayout').addEventListener('click', (e) => {
