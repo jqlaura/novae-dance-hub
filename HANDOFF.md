@@ -2,26 +2,19 @@
 
 先读 `CLAUDE.md`、`README.md`、`fancams.md`。用户用中文沟通，网页本身是**英文**。
 
-## 现在的状态
+## 现在的状态（全部接好了，只差真 iPhone 测试）
 
-- **已上线**：https://jqlaura.github.io/novae-dance-hub/ （GitHub Pages，main 分支根目录，自动跳到 `fancam-compare/`）。仓库已公开（上线前查过：没有孩子视频、口令、密钥；历史里的视频都是合成的）。
-- **外观**定稿 S2：Novae logo 配色 + 夜空流星头图 + 系统字体，步骤标题是指令（见 CLAUDE.md）。
-- **Drive 提交 / 读直拍的代码做好了**，用本地假服务测过（分块上传、重试、口令错误、拼好的文件逐字节一致）。真的 Apps Script 还没测。
-- **9 个直拍**压好在用户 Mac 的 `~/Downloads/neon-720/NEON_<成员>.mp4`（720×1280，每个约 47 MB）。
-- Claude Artifact 预览不再更新（以 GitHub Pages 为准）。
+- **已上线**：https://jqlaura.github.io/novae-dance-hub/ （仓库 jqlaura/novae-dance-hub，公开，GitHub Pages 用 main 根目录）。
+- **成员直拍**：NEON 9 人都在用户 Drive 的 `Fancams` 文件夹（知道链接可查看，文件夹 ID `1XNA2zVRygRC3pUL5foHW4XuBdQIofNI8`），`assignments.json` 里是 `drive:<ID>`。原压缩文件在用户 Mac `~/Downloads/neon-720/`。
+- **API 密钥**：`driveApiKey`，只允许 `https://jqlaura.github.io/*` + Drive API（没有这个网站来源的请求会被 403）。用它可以列出 Fancams 文件夹：`files?q='<文件夹ID>' in parents`，记得带 `Referer: https://jqlaura.github.io/novae-dance-hub/`。
+- **提交**：`submitUrl` 是用户部署的 Apps Script（`Novae Dance Hub — Submit`）。打开网页、做视频不要口令；**点 Submit 要填队伍口令**（用户定的，只在用户的 Apps Script 里，不写进仓库/记忆）。2026-11-04 线上实测：单块 5 MB 和 3 块 17 MB 都成功（每 8 MB 一块约 20–25 秒）。测试文件名是 “TEST … delete me”，在 `Fancam Submissions/Demo — sample videos/`，让用户删掉。
+- 用户考虑过“进门口令”和“完全不要口令”，最后定的是**只在交作业时要口令**。
 
-## 等用户做（说明：`fancam-compare/SETUP-GOOGLE-DRIVE.md`）
+## 接下来
 
-A. 把 `neon-720` 里 9 个视频传到 Drive `Fancams` 文件夹（知道链接可查看），发回 9 个链接。
-B. Google Cloud 建 API 密钥（只开 Drive API，只允许 `https://jqlaura.github.io/*`），发回密钥。
-C. Apps Script 粘贴 `apps-script/Code.gs`，改 `TEAM_CODE`，运行 `setup`，部署网页应用（我 / 任何人），发回 `/exec` 网址。
-
-## 收到以后要做
-
-1. 填进 `fancam-compare/assignments.json`：`driveApiKey`、`submitUrl`，9 个成员的 `video` 直接贴 Drive 分享链接。commit + push。
-2. 在线上网页测：选 NEON → 选成员（看能不能从 Drive 读出来、音乐能不能读）→ 用示例练习视频对齐 → 生成 → Submit（口令错一次、对一次）→ 让用户去 Drive `Fancam Submissions/` 确认收到。
-3. 请用户用**真 iPhone** 完整测一遍：上传真的练习视频 → 镜像 → 选成员 → 开始时间 → 生成 → 下载 → 提交。第 1 版修过的“声音读不出来”“预览卡顿没声音”第 2 版还没在 iPhone 上验证过。
-4. 这台 Mac 的 Xcode 加载失败（`xcrun simctl` 报 libxcodebuildLoader 错），iPhone 模拟器用不了，要用户重装/打开一次 Xcode。
+1. 请用户用**真 iPhone** 完整测一遍：打开网址 → NEON → 上传真的练习视频 → 镜像 → 选成员（从 Drive 读，约 47 MB）→ 开始时间 → 生成（实时录制）→ 下载 → Submit → 去 Drive 确认。重点看：iPhone 上读声音、预览卡不卡、导出视频声画对不对、75 MB 上传要多久。
+2. 这台 Mac 的 Xcode 坏了（`xcrun simctl` 报 libxcodebuildLoader 错），模拟器用不了，要用户重装/打开一次 Xcode。
+3. 加新歌：直拍压成 720×1280（命令见 CLAUDE.md），传到 Drive 新文件夹（知道链接可查看），用 API 密钥列出 ID，填进 `assignments.json` 新的一项。
 
 ## 注意
 
