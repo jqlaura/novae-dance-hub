@@ -1,5 +1,5 @@
 /**
- * Fancam Compare — receives kids' comparison videos and saves them in the coach's Google Drive.
+ * Novae Dance Hub — receives kids' comparison videos and saves them in Laura's Google Drive.
  *
  * Setup (step by step in SETUP-GOOGLE-DRIVE.md, part C): paste this file into a new project at
  * script.google.com, change TEAM_CODE below, run setup() once, then Deploy → New deployment →
@@ -35,6 +35,7 @@ function doPost(e) {
   try {
     if (req.action === 'start') return json(start(req));
     if (req.action === 'chunk') return json(chunk(req));
+    if (req.action === 'list') return json(list(req));
     return json({ ok: false, error: 'unknown action' });
   } catch (err) {
     console.error(err);
@@ -98,6 +99,27 @@ function chunk(req) {
     return { ok: true, done: true };
   }
   throw new Error('Drive said ' + code);
+}
+
+/** 3. Who has submitted this week: names, member, latest time, number of tries. No videos, no links. */
+function list(req) {
+  if (norm(req.passcode) !== norm(TEAM_CODE) || TEAM_CODE === 'change-me') {
+    Utilities.sleep(1500);
+    return { ok: false, code: 'passcode', error: 'wrong team code' };
+  }
+  const it = rootFolder().getFoldersByName(clean(req.assignment) || 'Other');
+  if (!it.hasNext()) return { ok: true, items: [] };
+  const files = it.next().getFiles(), people = {};
+  while (files.hasNext()) {
+    const f = files.next(), parts = f.getName().replace(/\.(mp4|webm|mov)$/i, '').split(' · ');
+    const name = (parts[0] || 'No name').trim(), key = name.toLowerCase(), when = f.getDateCreated();
+    const p = people[key] || (people[key] = { name: name, member: '', latest: 0, tries: 0 });
+    p.tries++;
+    if (when.getTime() > p.latest) { p.latest = when.getTime(); p.member = parts.length > 2 ? parts[1] : ''; p.name = name; }
+  }
+  const items = Object.keys(people).map(function (k) { const p = people[k]; return { name: p.name, member: p.member, latest: new Date(p.latest).toISOString(), tries: p.tries }; });
+  items.sort(function (a, b) { return a.latest < b.latest ? 1 : -1; });
+  return { ok: true, items: items };
 }
 
 // ---------- helpers ----------

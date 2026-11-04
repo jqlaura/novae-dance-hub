@@ -97,6 +97,37 @@ select:focus-visible, input[type=text]:focus-visible { outline: 2px solid var(--
 .members .choice:disabled { opacity: 0.4; cursor: default; }
 .members .choice small { display: block; font-weight: 400; font-size: 11.5px; color: inherit; opacity: 0.7; }
 
+.small { margin: 0; font-size: 13px; color: var(--muted); }
+.small .link { font-size: 13px; }
+.mirrorq { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.mirrorq .k { font-weight: 700; }
+.matchpair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.matchpair figure { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.matchpair .thumb { aspect-ratio: 9 / 16; background: #000; border-radius: 12px; overflow: hidden; }
+.matchpair .thumb video { width: 100%; height: 100%; object-fit: contain; display: block; }
+.matchpair .thumb.mirror video { transform: scaleX(-1); }
+.matchpair figcaption { font-size: 13px; color: var(--muted); text-align: center; }
+.matchline { margin: 0; font-weight: 700; }
+.row2 { display: flex; flex-direction: column; gap: 10px; }
+.fixbox { display: flex; flex-direction: column; gap: 10px; }
+.fixbox[hidden], .row2[hidden] { display: none; }
+.faded { opacity: 0.35; pointer-events: none; }
+.donecard { display: flex; flex-direction: column; gap: 10px; }
+.weekcard { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+.weekcard[hidden], .whobox[hidden], .whocode[hidden] { display: none; }
+.weekhead { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.weekhead b { font-size: 17px; }
+.weekhead .link { align-self: center; flex: none; }
+.whobox { display: flex; flex-direction: column; gap: 10px; }
+.whocode { display: flex; gap: 8px; }
+.whocode .btn { padding: 12px 18px; font-size: 15px; flex: none; }
+.wholist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.wholist li { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 15px; }
+.wholist li:first-child { border-top: 0; }
+.wholist .who { font-weight: 700; }
+.wholist .when { color: var(--muted); font-size: 13px; text-align: right; }
+.donecard[hidden] { display: none; }
+.donecard h3 { margin: 0; font-size: 20px; }
 .startpick { display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: center; }
 .startpick .thumb { width: 96px; aspect-ratio: 9 / 16; background: #000; border-radius: 12px; overflow: hidden; }
 .startpick .thumb video { width: 100%; height: 100%; object-fit: contain; display: block; }
@@ -185,6 +216,21 @@ canvas#rec { display: none; }
     <p class="lede">Put your practice video next to your member's fancam, matched to the music.</p>
   </header>
 
+  <section class="weekcard" id="weekCard" hidden>
+    <div class="weekhead">
+      <div><b id="weekName">HW</b> <span class="small" id="weekDue"></span></div>
+      <button class="link" id="whoBtn" type="button">See who's in</button>
+    </div>
+    <div class="whobox" id="whoBox" hidden>
+      <div class="whocode" id="whoCodeRow" hidden>
+        <input id="whoCode" type="text" placeholder="Team code" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Team code">
+        <button class="btn" id="whoGo" type="button">Show</button>
+      </div>
+      <p class="small" id="whoNote"></p>
+      <ol class="wholist" id="whoList"></ol>
+    </div>
+  </section>
+
   <section class="step" id="step1" hidden>
     <h2><span class="n">1</span>Choose your assignment</h2>
     <select id="assignment" aria-label="Assignment"><option value="">Select an assignment…</option></select>
@@ -196,31 +242,24 @@ canvas#rec { display: none; }
     <h2><span class="n">1</span>Upload your practice video</h2>
     <label class="filebtn">Choose video<input id="fileP" type="file" accept="video/*"></label>
     <span class="filemeta" id="metaP">No video yet</span>
-    <p class="mirror-badge"><span aria-hidden="true">⇆</span> Your video will be mirrored (flipped left–right), like the member videos, for easier comparison and review.</p>
     <button class="link" id="sampleOwn" type="button" hidden>Use a sample practice video</button>
     <div class="framer" id="framer" hidden>
+      <div class="mirrorq">
+        <span class="k">Is your video mirrored?</span>
+        <div class="choices" id="mirrorChoice">
+          <button class="choice" type="button" data-v="yes" aria-pressed="false">Yes</button>
+          <button class="choice" type="button" data-v="no" aria-pressed="false">No</button>
+        </div>
+        <p class="small" id="mirrorNote">Mirrored = looks like dancing in front of a mirror.</p>
+      </div>
       <div class="frame" id="frame">
         <video id="frameVid" muted playsinline loop preload="auto"></video>
         <div class="guide v"></div><div class="guide h"></div><div class="guide tag">CENTER</div>
       </div>
-      <div class="frame-ctl">
-        <label for="zoom">Zoom</label>
-        <input id="zoom" type="range" min="100" max="250" value="100" step="1">
-        <button class="link" id="resetCrop" type="button">Reset</button>
-      </div>
-      <p class="hint">Drag the video so you're on the center line. Zoom in if you look small.</p>
+      <p class="small">Drag to put yourself on the center line. Pinch with two fingers to zoom. <button class="link" id="resetCrop" type="button">Reset</button></p>
     </div>
   </section>
 
-  <section class="step locked" id="step3" hidden>
-    <h2><span class="n">3</span>Check if your video is mirrored</h2>
-    <p class="hint">Find a moment where you raise your right hand. If it's on the right side of the screen, your video is mirrored.</p>
-    <div class="choices" id="mirrorChoice">
-      <button class="choice" type="button" data-v="yes" aria-pressed="false">Yes, it's mirrored</button>
-      <button class="choice" type="button" data-v="no" aria-pressed="false">No, it isn't</button>
-    </div>
-    <p class="notice" id="mirrorNote" hidden></p>
-  </section>
 
   <section class="step locked" id="step4">
     <h2><span class="n">2</span>Pick your member</h2>
@@ -230,19 +269,28 @@ canvas#rec { display: none; }
   </section>
 
   <section class="step locked" id="step5">
-    <h2><span class="n">3</span>Pick a start time</h2>
-    <div class="startpick">
-      <div class="thumb mirror" id="startThumb"><video id="startVid" muted playsinline preload="auto"></video></div>
+    <h2><span class="n">3</span>Check the match</h2>
+    <div class="matchpair">
+      <figure><div class="thumb" id="thumbP"><video id="stillP" muted playsinline preload="auto"></video></div><figcaption>You · <span class="num" id="stillPt">0:00</span></figcaption></figure>
+      <figure><div class="thumb mirror" id="startThumb"><video id="startVid" muted playsinline preload="auto"></video></div><figcaption><span id="stillFname">Member</span> · <span class="num" id="stillFt">0:00</span></figcaption></figure>
+    </div>
+    <p class="matchline" id="matchLine">Pick your member first.</p>
+    <div class="row2" id="matchBtns">
+      <button class="btn dark" id="looksRight" type="button">Looks right</button>
+      <button class="link" id="fixMatch" type="button">Not right? Tell us where it starts</button>
+    </div>
+    <div class="fixbox" id="fixBox" hidden>
+      <p class="hint" id="fixQ">Where does your video start in the member's video?</p>
       <div class="startctl">
         <span class="big num" id="startLbl">0:00</span>
-        <input id="startRange" type="range" min="0" max="100" value="0" step="0.1" aria-label="Start time">
+        <input id="startRange" type="range" min="0" max="100" value="0" step="0.1" aria-label="Start time in the member's video">
         <div class="nudge" id="startNudge">
           <button type="button" data-s="-5">−5s</button><button type="button" data-s="-1">−1s</button>
           <button type="button" data-s="1">+1s</button><button type="button" data-s="5">+5s</button>
         </div>
       </div>
+      <button class="btn" id="applyFix" type="button">Match from here</button>
     </div>
-    <p class="hint" id="startHint">Time in the member's video. The comparison runs from here to the end of your video.</p>
   </section>
 
   <section class="step locked" id="step6">
@@ -306,12 +354,18 @@ canvas#rec { display: none; }
         <p class="notice" id="finalNote" hidden></p>
         <div class="submitform" id="submitForm" hidden>
         <input id="kidName" type="text" placeholder="Your name" autocomplete="name" aria-label="Your name">
-        <input id="teamCode" type="text" placeholder="Team code (ask your coach)" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Team code">
+        <input id="teamCode" type="text" placeholder="Team code (ask Laura)" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Team code">
         <button class="btn" id="submitBtn" type="button">Submit</button>
         <div class="progress" id="upProg" hidden><i id="upBar"></i></div>
         <p class="note" id="submitNote" aria-live="polite"></p>
         </div>
       </div>
+    </div>
+    <div class="donecard" id="doneCard" hidden>
+      <h3 id="doneTitle">You're in! ✓</h3>
+      <p class="hint" id="doneSub"></p>
+      <button class="link" id="doneWho" type="button" hidden>See who's in</button>
+      <button class="btn" id="startOver" type="button">Start a new video</button>
     </div>
   </section>
   <canvas id="rec"></canvas>
@@ -330,7 +384,7 @@ const S = {
   audio: { p: null, f: null }, env: { p: null, f: null }, chr: { p: null, f: null }, ownError: false,
   d: 0,             // member time = practice time + d
   aligned: false, cand: null, candIdx: 0, lastAlign: null,
-  crop: { z: 1, x: 0, y: 0 }, mirror: true, mirrorAnswered: true, mirrorF: true,
+  crop: { z: 1, x: 0, y: 0 }, mirror: false, mirrorAnswered: false, mirrorF: true,
   startAt: 0, layout: 'lr', swap: false, audioFrom: 'f',
   playing: false, T: 0, L: 0, t0: 0, src: null, exporting: false,
   outBlob: null, outExt: 'mp4', cfg: {}, submitting: false, submitted: false,
@@ -633,7 +687,7 @@ function align(ep, ef, range) {    // range = {lo, hi}: only offsets d (seconds)
 
 // ---------- steps ----------
 function setStep(n, state) {
-  const el = $('step' + n);
+  const el = $('step' + n); if (!el) return;
   el.classList.toggle('locked', state === 'locked'); el.classList.toggle('done', state === 'done');
 }
 function refreshSteps() {
@@ -662,6 +716,7 @@ async function loadAssignments() {
   for (const a of S.assignments) { const o = document.createElement('option'); o.value = a.id; o.textContent = a.title; sel.append(o); }
   const def = S.cfg.defaultAssignment || (S.assignments.find((a) => !a.demo) || {}).id;   // no picker: one dance at a time
   if (def) { sel.value = def; chooseAssignment(def, true); }
+  setupWeek();
 }
 function chooseAssignment(id, quiet) {
   stopPlayback();
@@ -684,7 +739,7 @@ function renderMembers() {
     b.addEventListener('click', () => chooseMember(m));
     box.append(b);
   }
-  if (!S.member) $('memberHint').textContent = ready ? 'Pick the member you were assigned.' : "Member videos for this assignment haven't been added yet. Ask your coach.";
+  if (!S.member) $('memberHint').textContent = ready ? 'Pick the member you were assigned.' : "Member videos for this assignment haven't been added yet. Ask Laura.";
 }
 
 // ---------- 2. your video + framing ----------
@@ -696,7 +751,7 @@ async function loadOwn(file) {
   vid.p.src = S.url.p;
   const fv = $('frameVid'); fv.src = S.url.p; fv.play().catch(() => {});
   $('framer').hidden = false;
-  S.crop = { z: 1, x: 0, y: 0 }; $('zoom').value = 100; applyTransforms();
+  S.crop = { z: 1, x: 0, y: 0 }; resetMirrorQuestion();
   const name = file.name || 'Your video', meta = $('metaP');
   meta.textContent = name + ' · reading the sound…';
   refreshSteps();
@@ -724,32 +779,53 @@ function applyTransforms() {
   $('startThumb').classList.toggle('mirror', S.mirrorF);
 }
 const clampPan = (v) => Math.max(-0.5 * S.crop.z, Math.min(0.5 * S.crop.z, v));
-(function framing() {
-  const fr = $('frame'); let drag = null;
-  fr.tabIndex = 0; fr.setAttribute('aria-label', 'Your video. Drag or use arrow keys to move it.');
-  fr.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, cx: S.crop.x, cy: S.crop.y }; fr.setPointerCapture(e.pointerId); fr.style.cursor = 'grabbing'; });
+(function framing() {               // one finger moves, two fingers zoom (trackpad pinch on a computer)
+  const fr = $('frame'), pts = new Map(); let g0 = null;
+  fr.tabIndex = 0; fr.setAttribute('aria-label', 'Your video. Drag to move, pinch to zoom, or use arrow keys and + / −.');
+  const sx = () => (S.mirror ? -1 : 1);                 // the preview is shown mirrored: keep the video under the finger
+  const gesture = () => {
+    const p = [...pts.values()], r = fr.getBoundingClientRect();
+    const cx = p.reduce((a, q) => a + q.x, 0) / p.length, cy = p.reduce((a, q) => a + q.y, 0) / p.length;
+    const dist = p.length > 1 ? Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) : 0;
+    return { cx, cy, dist, w: r.width, h: r.height };
+  };
+  const begin = () => { g0 = { ...gesture(), x: S.crop.x, y: S.crop.y, z: S.crop.z }; };
+  fr.addEventListener('pointerdown', (e) => { pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); begin(); fr.style.cursor = 'grabbing'; try { fr.setPointerCapture(e.pointerId); } catch (er) {} });
   fr.addEventListener('pointermove', (e) => {
-    if (!drag) return; const r = fr.getBoundingClientRect();
-    S.crop.x = clampPan(drag.cx + (S.mirror ? -1 : 1) * (e.clientX - drag.x) / r.width);
-    S.crop.y = clampPan(drag.cy + (e.clientY - drag.y) / r.height);
+    if (!pts.has(e.pointerId) || !g0) return;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const g = gesture();
+    if (pts.size > 1 && g0.dist > 10) S.crop.z = Math.max(1, Math.min(3, g0.z * g.dist / g0.dist));
+    S.crop.x = clampPan(g0.x + sx() * (g.cx - g0.cx) / g.w);
+    S.crop.y = clampPan(g0.y + (g.cy - g0.cy) / g.h);
     applyTransforms();
   });
-  for (const ev of ['pointerup', 'pointercancel']) fr.addEventListener(ev, () => { drag = null; fr.style.cursor = ''; });
+  const end = (e) => { pts.delete(e.pointerId); fr.style.cursor = ''; if (pts.size) begin(); else g0 = null; };
+  for (const ev of ['pointerup', 'pointercancel']) fr.addEventListener(ev, end);
+  for (const ev of ['gesturestart', 'gesturechange']) fr.addEventListener(ev, (e) => e.preventDefault());   // iPhone: don't zoom the whole page
+  fr.addEventListener('wheel', (e) => {                  // trackpad pinch arrives as ctrl + wheel
+    if (!e.ctrlKey) return; e.preventDefault();
+    S.crop.z = Math.max(1, Math.min(3, S.crop.z * Math.exp(-e.deltaY / 100))); S.crop.x = clampPan(S.crop.x); S.crop.y = clampPan(S.crop.y); applyTransforms();
+  }, { passive: false });
   fr.addEventListener('keydown', (e) => {
-    const k = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key]; if (!k) return;
-    e.preventDefault(); S.crop.x = clampPan(S.crop.x + (S.mirror ? -1 : 1) * k[0] * 0.02); S.crop.y = clampPan(S.crop.y + k[1] * 0.02); applyTransforms();
+    const k = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+    if (k) { e.preventDefault(); S.crop.x = clampPan(S.crop.x + sx() * k[0] * 0.02); S.crop.y = clampPan(S.crop.y + k[1] * 0.02); applyTransforms(); return; }
+    if (e.key === '+' || e.key === '=' || e.key === '-') { e.preventDefault(); S.crop.z = Math.max(1, Math.min(3, S.crop.z * (e.key === '-' ? 0.9 : 1.1))); S.crop.x = clampPan(S.crop.x); S.crop.y = clampPan(S.crop.y); applyTransforms(); }
   });
-  $('zoom').addEventListener('input', (e) => { S.crop.z = e.target.value / 100; S.crop.x = clampPan(S.crop.x); S.crop.y = clampPan(S.crop.y); applyTransforms(); });
-  $('resetCrop').addEventListener('click', () => { S.crop = { z: 1, x: 0, y: 0 }; $('zoom').value = 100; applyTransforms(); });
+  $('resetCrop').addEventListener('click', () => { S.crop = { z: 1, x: 0, y: 0 }; applyTransforms(); });
 })();
 
 // ---------- 3. mirror ----------
 function setMirror(on, fromQuestion) {
   S.mirror = on; applyTransforms();
   pressSeg('segMirror', (b) => b.dataset.v === (on ? '1' : '0'));
-  const note = $('mirrorNote'); note.hidden = false;
-  note.textContent = on ? 'Done — we mirrored your video so it matches the member video.' : 'Great — we kept your video as it is.';
+  $('mirrorNote').textContent = on ? "We'll mirror it for you." : 'Great, we keep it as it is.';
   if (fromQuestion) pressSeg('mirrorChoice', (b) => b.dataset.v === (on ? 'no' : 'yes'));
+  updateMatchView();
+}
+function resetMirrorQuestion() {
+  S.mirrorAnswered = false; S.mirror = false; applyTransforms(); pressSeg('mirrorChoice', () => false);
+  $('mirrorNote').textContent = 'Mirrored = looks like dancing in front of a mirror.';
 }
 
 // ---------- 4. member ----------
@@ -815,77 +891,70 @@ async function chooseMember(m) {
   }
 }
 
-// ---------- 5. start time ----------
+// ---------- 3. check the match ----------
+// The music match picks the spot by itself. Two still pictures show it; if it's wrong, the kid
+// says where their video starts in the member's video and we match again only around there
+// (and if the music still can't decide, we use exactly the time they gave).
 function setupStart() {
-  const r = $('startRange'); r.max = Math.max(0, S.dur.f - 1).toFixed(1);
-  setStart(0);
+  $('startRange').max = Math.max(0, S.dur.f - 1).toFixed(1);
+  S.startAt = 0; $('fixBox').hidden = true; $('matchBtns').hidden = false;
+  if (S.member) { $('stillFname').textContent = S.member.name; $('fixQ').textContent = `Where does your video start in ${S.member.name}'s video?`; }
+  updateMatchView();
 }
-function setStart(t, byUser) {
+function setStart(t) {
   const max = +$('startRange').max || 0;
   S.startAt = Math.max(0, Math.min(max, t));
-  if (byUser) { S.startTouched = true; clearTimeout(S.rematchTimer); S.rematchTimer = setTimeout(rematchIfOutside, 500); }
-  if (byUser && !$('result').hidden && !S.submitting) { $('result').hidden = true; $('exportBtn').hidden = false; }   // the old video no longer matches
   $('startRange').value = S.startAt; $('startLbl').textContent = fmt(S.startAt);
-  try { $('startVid').currentTime = S.startAt + 0.05; } catch (e) {}
-  if (S.aligned) { const was = S.playing; stopPlayback(); recompute(); seekAll(0); if (was) play(); }
-  showStartHint();
+  showStill($('startVid'), S.startAt + 0.05);
 }
 // the part of the member's video that your video covers (from the music match)
 function coverage() {
   const sp0 = Math.max(0, -S.d), sf0 = sp0 + S.d;
   return { from: sf0, to: sf0 + Math.max(0, Math.min(S.dur.p - sp0, S.dur.f - sf0)) };
 }
-// after a music match: put the start slider where your video begins in the member's video
-function startAtMatch() {
-  if (S.startTouched) return;
-  $('startRange').value = S.startAt = Math.min(+$('startRange').max || 0, coverage().from);
-  $('startLbl').textContent = fmt(S.startAt);
-  try { $('startVid').currentTime = S.startAt + 0.05; } catch (e) {}
+// show one exact frame in a paused <video> (iPhone ignores the jump until the video has played once)
+async function showStill(v, t) {
+  if (!v || !v.src) return;
+  try {
+    if (v.readyState < 1) await onceEv(v, 'loadedmetadata', 8000);
+    if (!v._primed) { v.muted = true; await v.play().catch(() => {}); v.pause(); v._primed = true; }
+    v.currentTime = Math.max(0, Math.min(t, (v.duration || 1e9) - 0.05));
+  } catch (e) {}
 }
-// Best music match whose part of the member's video contains the start time you picked — but only
-// if it is almost as strong as the best match anywhere. A weak match near your pick is just noise:
-// then we keep the best match (your start time can't override the music).
-function alignNear() {
-  const best = matchMusic();
-  const near = matchMusic({ lo: S.startAt - S.dur.p, hi: S.startAt + 3 });
-  if (!near) return { r: best };
-  const ok = near.cscore != null && best.cscore != null ? near.cscore >= 0.75 * best.cscore : near.score >= 0.6 * best.score;
-  return ok ? { r: near } : { r: best };
+function updateMatchView() {
+  const line = $('matchLine');
+  if (!S.aligned) { line.textContent = S.member && S.env.p ? 'Matching the music…' : 'Upload your video and pick your member first.'; return; }
+  const c = coverage(), mine = Math.max(0, -S.d), name = S.member ? S.member.name : 'the member';
+  line.textContent = mine < 0.5 ? `Your video starts at ${name}'s ${fmt(c.from)}.` : `${fmt(mine)} into your video = ${name}'s ${fmt(c.from)}.`;
+  $('stillPt').textContent = fmt(mine); $('stillFt').textContent = fmt(c.from);
+  const sp = $('stillP'); if (S.url.p && sp.getAttribute('src') !== S.url.p) { sp.src = S.url.p; sp._primed = false; }
+  sp.style.transform = S.mirror ? 'scaleX(-1)' : '';
+  showStill(sp, mine + 0.05); showStill($('startVid'), c.from + 0.05);
 }
-// You picked a start time: songs repeat (chorus!), so look for the best music match again, only
-// where your video would contain that time. Skipped if you already picked a match by hand and
-// it still covers your start time.
-function rematchIfOutside() {
-  if (!S.aligned || S.exporting || !S.env.p || !S.env.f) return;
-  const c = coverage();
-  if (S.manualMatch && S.startAt >= c.from - 1 && S.startAt <= c.to - 1) return;
-  const { r } = alignNear();
-  if (Math.abs(r.d - S.d) < 0.2) return;
-  S.lastAlign = r; S.cand = r.candidates; S.candIdx = 0; S.d = r.d; S.manualMatch = false;
-  const was = S.playing; stopPlayback(); recompute(); seekAll(0);
-  showAlignStatus('ok', 'Matched again near your start time');
-  if (was) play();
-}
-function showStartHint() {
-  const h = $('startHint');
-  if (!S.aligned) { h.textContent = "Time in the member's video where the comparison starts. We set it for you once the music is matched."; return; }
-  const sp0 = Math.max(0, -S.d), sf0 = sp0 + S.d, lfull = Math.max(0, Math.min(S.dur.p - sp0, S.dur.f - sf0));
-  const s = starts();
-  if (S.startAt > sf0 + lfull - 1) h.textContent = `Your video only covers ${fmt(sf0)}–${fmt(sf0 + lfull)} of the member's video, so we start at ${fmt(s.f)}.`;
-  else if (S.startAt < sf0 - 0.5) h.textContent = `Your video starts at ${fmt(sf0)} of the member's video, so the comparison starts there.`;
-  else if (!S.startTouched || Math.abs(S.startAt - sf0) < 0.5) h.textContent = `Found by the music: your video is ${fmt(sf0)}–${fmt(sf0 + lfull)} of the member's video. Move this if you want to start later.`;
-  else h.textContent = `Comparison: ${fmt(s.f)} to ${fmt(s.f + S.L)} of the member's video (${fmt(S.L)} long).`;
+function startAtMatch() {}
+function invalidateResult() { if (!$('result').hidden && !S.submitting) { $('result').hidden = true; $('exportBtn').hidden = false; } }
+function applyFix() {
+  if (!S.aligned) return;
+  // Look within ±8 s of the typed time (kids type it roughly). Near the start the practice video may have a quiet intro, so look back further.
+  const best = matchMusic(), near = matchMusic({ lo: S.startAt < 8 ? -S.dur.p : S.startAt - 8, hi: S.startAt + 8 });
+  const ok = near && (near.cscore != null && best && best.cscore != null ? near.cscore >= 0.5 * best.cscore : near.score >= 0.4 * best.score);
+  const r = ok ? near : { d: S.startAt, ratio: 1, candidates: [S.startAt], how: 'typed', notes: '' };
+  S.lastAlign = r; S.cand = r.candidates; S.candIdx = 0; S.d = r.d; S.manualMatch = true;
+  recompute(); invalidateResult();
+  $('fixBox').hidden = true; $('matchBtns').hidden = false;
+  showAlignStatus('ok', ok ? 'Matched again near your time' : 'Using the time you picked');
+  updateMatchView();
 }
 
 // ---------- alignment ----------
 function runAlign() {
   status('busy', 'Matching the music…');
-  const r = S.startTouched ? alignNear().r : matchMusic();
+  const r = matchMusic();
   S.lastAlign = r; S.cand = r.candidates; S.candIdx = 0;
   S.d = r.d; S.aligned = true; S.T = 0; S.manualMatch = false;
   const sure = r.ratio >= 1.05;
   showAlignStatus(sure ? 'ok' : 'warn', sure ? 'Matched to the music' : 'Matched — please check it');
-  startAtMatch(); autoLayout(); recompute(); seekAll(0); refreshSteps();
+  autoLayout(); recompute(); seekAll(0); refreshSteps(); updateMatchView();
 }
 function showAlignStatus(kind, main) {
   const c = coverage(), mine = Math.max(0, -S.d);
@@ -898,7 +967,7 @@ function showAlignStatus(kind, main) {
 function starts() {           // where each video is when timeline T = 0 (start time applied)
   const sp0 = Math.max(0, -S.d), sf0 = sp0 + S.d;
   const lfull = Math.max(0, Math.min(S.dur.p - sp0, S.dur.f - sf0));
-  const shift = Math.max(0, Math.min(S.startAt - sf0, lfull - 1));
+  const shift = 0;                 // no trimming: the comparison starts where your video meets the member's
   return { p: sp0 + shift, f: sf0 + shift };
 }
 function recompute() {
@@ -906,7 +975,7 @@ function recompute() {
   S.L = Math.max(0, Math.min(S.dur.p - s.p, S.dur.f - s.f));
   S.T = Math.min(S.T, S.L);
   $('offsetLbl').textContent = `Offset ${S.d >= 0 ? '+' : '−'}${Math.abs(S.d).toFixed(3)}s · ${fmt(S.L)} long`;
-  showStartHint(); updateTime();
+  updateTime();
 }
 function seekAll(T) {
   S.T = T; const s = starts();
@@ -1476,11 +1545,75 @@ function weekFolder(now = new Date()) {
   const day0 = Date.UTC(+m[1], +m[2] - 1, +m[3]), today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
   return (w.prefix || 'HW') + Math.max(1, Math.floor((today - day0) / 864e5 / 7) + 1);
 }
+// ---------- who's in this week (names only; needs the team code) ----------
+function weekDue(now = new Date()) {
+  const w = (S.cfg && S.cfg.weeks) || {}, m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(w.firstSunday || '');
+  if (!m) return '';
+  const n = +weekFolder(now).replace(/\D+/g, '') || 1;
+  const sat = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] + (n - 1) * 7 + 6));
+  return sat.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+function savedCode() { try { return localStorage.getItem('fancam.code') || ''; } catch (e) { return ''; } }
+function setupWeek() {
+  if (!S.cfg.submitUrl || !(S.cfg.weeks && S.cfg.weeks.firstSunday)) return;
+  $('weekCard').hidden = false; $('weekName').textContent = weekFolder();
+  const due = weekDue(); $('weekDue').textContent = due ? '· due ' + due : '';
+  if (savedCode()) loadWho(savedCode(), true);
+}
+function whenText(iso) {
+  const d = new Date(iso); if (isNaN(d)) return '';
+  return d.toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+}
+async function loadWho(code, quiet) {
+  const note = $('whoNote'), list = $('whoList');
+  if (!quiet) { note.textContent = 'Loading…'; }
+  let r;
+  try { r = await callScript({ action: 'list', passcode: code, assignment: weekFolder() }); }
+  catch (e) { if (!quiet) note.textContent = "Couldn't load the list. Check your internet and try again."; return false; }
+  if (!r.ok) {
+    if (quiet) return false;
+    $('whoCodeRow').hidden = false;
+    note.textContent = r.code === 'passcode' ? "That team code isn't right. Check it with Laura."
+      : /unknown action/i.test(r.error || '') ? "This list isn't turned on yet. Ask Laura." : "Couldn't load the list (" + (r.error || 'error') + ').';
+    return false;
+  }
+  try { localStorage.setItem('fancam.code', code); } catch (e) {}
+  if (!$('teamCode').value) $('teamCode').value = code;
+  const items = r.items || [];
+  $('weekName').textContent = `${weekFolder()} · ${items.length} in`;
+  $('whoCodeRow').hidden = true; list.textContent = '';
+  for (const it of items) {
+    const li = document.createElement('li'), a = document.createElement('span'), b = document.createElement('span');
+    a.innerHTML = '<span class="who"></span><br><span class="small"></span>';
+    a.firstChild.textContent = it.name || 'No name'; a.lastChild.textContent = it.member || '';
+    b.className = 'when'; b.textContent = whenText(it.latest) + (it.tries > 1 ? ` · ${it.tries} tries` : '');
+    li.append(a, b); list.append(li);
+  }
+  note.textContent = items.length ? '' : 'Nobody has submitted yet this week. Be the first!';
+  return true;
+}
+async function openWho(scroll) {
+  const box = $('whoBox');
+  box.hidden = false; $('whoBtn').textContent = 'Hide';
+  if (scroll) $('weekCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const code = $('teamCode').value.trim() || savedCode();
+  if (code && await loadWho(code)) return;
+  $('whoCodeRow').hidden = false;
+  if (!code) $('whoNote').textContent = 'Type the team code to see who has submitted this week.';
+}
+$('whoBtn').addEventListener('click', () => {
+  if (!$('whoBox').hidden) { $('whoBox').hidden = true; $('whoBtn').textContent = "See who's in"; return; }
+  openWho(false);
+});
+$('whoGo').addEventListener('click', () => { const c = $('whoCode').value.trim(); if (c) loadWho(c); else $('whoCode').focus(); });
+$('whoCode').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('whoGo').click(); });
+$('doneWho').addEventListener('click', () => openWho(true));
+
 async function submit() {
   const note = $('submitNote'), name = $('kidName').value.trim(), code = $('teamCode').value.trim();
   if (!S.outBlob || S.submitting || S.submitted) return;
   if (!name) { note.textContent = 'Type your name first.'; $('kidName').focus(); return; }
-  if (!S.cfg.submitUrl) { note.textContent = "Submitting isn't set up yet. Tap Download video and send it to your coach."; return; }
+  if (!S.cfg.submitUrl) { note.textContent = "Submitting isn't set up yet. Tap Download video and send it to Laura."; return; }
   if (!code) { note.textContent = 'Type the team code first.'; $('teamCode').focus(); return; }
   try { localStorage.setItem('fancam.name', name); localStorage.setItem('fancam.code', code); } catch (e) {}
   const blob = S.outBlob, total = blob.size, bar = $('upBar');
@@ -1503,10 +1636,11 @@ async function submit() {
       note.textContent = r.done ? '' : `Uploading… ${Math.round(100 * off / total)}% (keep this page open)`;
     }
     S.submitted = true; $('submitBtn').textContent = 'Submitted ✓';
-    note.textContent = 'Submitted! Your coach has your video. Great work this week!';
+    note.textContent = 'Submitted! Laura has your video. Great work this week!';
+    setTimeout(() => finish('yes'), 1200);
   } catch (e) {
     console.error(e); $('upProg').hidden = true;
-    note.textContent = e.code === 'passcode' ? "That team code isn't right. Check it with your coach."
+    note.textContent = e.code === 'passcode' ? "That team code isn't right. Check it with Laura."
       : "The upload didn't finish (" + (e.message || e) + "). Check your internet and tap Submit again.";
   } finally { S.submitting = false; updateControls(); }
 }
@@ -1532,11 +1666,14 @@ $('sampleOwn').addEventListener('click', async () => {
 });
 $('mirrorChoice').addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
-  S.mirrorAnswered = true; setMirror(b.dataset.v === 'no', true); refreshSteps();
-  if (!S.member) scrollToStep(4);
+  S.mirrorAnswered = true; setMirror(b.dataset.v === 'no', true); refreshSteps(); invalidateResult();
 });
-$('startRange').addEventListener('input', (e) => setStart(+e.target.value, true));
-$('startNudge').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setStart(S.startAt + +b.dataset.s, true); });
+$('startRange').addEventListener('input', (e) => setStart(+e.target.value));
+$('startNudge').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setStart(S.startAt + +b.dataset.s); });
+$('looksRight').addEventListener('click', () => scrollToStep(6));
+$('fixMatch').addEventListener('click', () => { $('fixBox').hidden = false; $('matchBtns').hidden = true; setStart(S.aligned ? coverage().from : 0); });
+$('applyFix').addEventListener('click', applyFix);
+$('startOver').addEventListener('click', startOver);
 $('playBtn').addEventListener('click', () => (S.playing || S.lining ? stopPlayback() : play()));
 // dragging: pause and show the spot; letting go: line both videos up there and carry on playing
 let scrubWas = null;
@@ -1581,11 +1718,44 @@ $('finalChoice').addEventListener('click', (e) => {
     return;
   }
   $('submitForm').hidden = true;
-  const ov = $('outVid'); try { URL.revokeObjectURL(ov.src); } catch (er) {} ov.removeAttribute('src'); ov.load();
-  S.outBlob = null; $('result').hidden = true; updateControls();
-  status('ok', "Love that! Practice the parts you spotted", "When you're ready, record again and upload your new video in step 1.");
-  scrollToStep(2);
+  finish('no');
 });
+// After a decision (submitted, or "I'll practice more"): grey out this attempt, offer a fresh start.
+function finish(kind) {
+  for (const n of [2, 4, 5]) $('step' + n).classList.add('faded');
+  $('exportBtn').hidden = true; $('result').hidden = true; $('doneCard').hidden = false;
+  if (kind === 'yes') {
+    const when = new Date().toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+    $('doneTitle').textContent = "You're in! ✓";
+    $('doneSub').textContent = `${weekFolder()} · ${S.member ? S.member.name : ''} · ${when}. Want to do even better? Practice and submit again any time this week.`;
+    $('doneWho').hidden = !S.cfg.submitUrl;
+    status('ok', 'Submitted', 'Laura has your video. Great work this week!');
+    const c = $('teamCode').value.trim(); if (c) loadWho(c, true);
+  } else {
+    $('doneTitle').textContent = 'Keep going!';
+    $('doneSub').textContent = 'Practice the parts you spotted, then record again and make a new video.';
+    $('doneWho').hidden = true;
+    status('ok', 'Keep going!', 'Practice the parts you spotted, then record again.');
+  }
+  scrollToStep(6);
+}
+function startOver() {
+  if (S.submitting || S.exporting) return;
+  for (const n of [2, 4, 5]) $('step' + n).classList.remove('faded');
+  $('doneCard').hidden = true; $('result').hidden = true; $('submitForm').hidden = true; pressSeg('finalChoice', () => false);
+  const ov = $('outVid'); try { URL.revokeObjectURL(ov.src); } catch (e) {} ov.removeAttribute('src'); ov.load();
+  S.outBlob = null; S.submitted = false; $('submitBtn').textContent = 'Submit'; $('submitNote').textContent = ''; $('upProg').hidden = true;
+  // forget the practice video; keep the member (and its downloaded video), name and team code
+  stopPlayback();
+  if (S.url.p) URL.revokeObjectURL(S.url.p);
+  S.file.p = null; S.url.p = null; S.env.p = null; S.chr.p = null; S.audio.p = null; S.dur.p = 0; S.aligned = false; S.ownError = false;
+  for (const v of [vid.p, $('frameVid'), $('stillP')]) { v.removeAttribute('src'); v.load(); v._primed = false; }
+  $('fileP').value = ''; $('metaP').textContent = 'No video yet'; $('framer').hidden = true;
+  S.crop = { z: 1, x: 0, y: 0 }; resetMirrorQuestion();
+  status('', 'Waiting for your video', 'We match the two videos by the music.');
+  updateControls(); refreshSteps(); updateMatchView();
+  scrollToStep(2);
+}
 
 window.__dance = S; S._t = { align, decodeVideoAudio, decode, onsetEnvelope, toMono, openTracks, videoDecoderConfig, weekFolder, matchMusic, chromaMatch }; // for testing
 try { $('kidName').value = localStorage.getItem('fancam.name') || ''; $('teamCode').value = localStorage.getItem('fancam.code') || ''; } catch (e) {}

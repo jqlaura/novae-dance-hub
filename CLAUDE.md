@@ -25,6 +25,11 @@
 - **第 3 版流程（用户 2026-11-04 定）**：名字 Novae Dance Hub；没有选作业（`defaultAssignment` = NEON，选择框藏起来，测试还能用）；孩子的视频**一律镜像**，上传步骤里有一行说明（不再问是否镜像）；步骤：1 上传 → 2 选成员 → 3 开始时间 → 4 Generate comparison video。**没有实时预览/Adjust/Try another**（手机上同时播两个视频会卡、会对不齐，用户明确不要）。生成后只有：看视频、Download、“Are you happy with this homework? Is this your final submission?” → “Yes, I'm doing my best!”（出现名字+口令+Submit）/ “No, I'll practice more and resubmit”（删掉视频，回到第 1 步，鼓励的话）。目的是让孩子认真看对比视频找问题。
 - **生成方式：逐帧合成**（`exportExact`）：WebCodecs 解码两边每一帧（iPhone 10-bit HDR HEVC 在 Safari 内核里解不了时，自动改用 `<video>` 逐帧跳转 `ElementSource`），按准确时间画到 canvas，VideoEncoder 编 H.264，成员的 AAC 音轨原样拷进自己写的 MP4（`writeMP4`）。从成员的一个 AAC 帧开始，画面跟着挪，声音精确到采样。没有 VideoEncoder 的浏览器才用旧的录屏方式。用户的 Aijing 视频验证：Chrome 和 WebKit 输出里孩子画面、成员画面、音乐误差都在 1 帧以内（`check_sync.sh` 用动作能量互相关测）。
 - **每周文件夹**：提交存 `Fancam Submissions/HW<n>/`，周日开始新的一周，`weeks.firstSunday` = 2026-10-25 是 HW1（10/25–10/31），11/1–11/7 是 HW2。周数在网页里按孩子手机的日期算，作为 `assignment` 传给 Apps Script（脚本不用改）。
+- **第 4 版（用户 2026-11-04 定）**：上传后问 “Is your video mirrored? Yes / No”（No 就帮他镜像；没回答不能往下走）；两指捏合缩放（不再有滑块），拖动 + Reset 保留。第 3 步改成 **Check the match**：两张静止画面（孩子的第一帧 / 成员在对上的时间点）+ “Your video starts at Rada's 0:56” + Looks right；“Not right? Tell us where it starts” 只在填的时间 ±8 秒里重新对（填的时间小于 8 秒就往前看到孩子视频长度，防止孩子视频开头有空白），够不上全局最好的 50% 就直接用填的时间。不再有 trim / 从后面开始。
+- **音乐对齐（756480a）**：先用旋律/和弦（chroma，10 fps）找歌里的位置，再用鼓点（onset）在 ±0.4 秒里精确到帧。练习用录音室版、直拍是现场声时也能对上。真视频：Rada 副歌 = 56.07；Aijing = −4.84。
+- **提交后**：前面的步骤变灰，出现完成卡片（“You're in! ✓ HW2 · 成员 · 时间” 或 “Keep going!”）和 **Start a new video**（清掉练习视频和结果，保留名字、口令、成员和已下载的成员视频，重新问镜像）。
+- **Who's in · HW<n>**：标题下面的卡片（“HW2 · N in · due Sat, Nov 7 · See who's in”），提交后也有链接。要口令；只显示名字、成员、最后提交时间和次数，没有视频和链接。Apps Script 新加了 `list` 动作（用户要把新 Code.gs 粘贴进去并部署 New version，旧脚本会回 unknown action，网页显示 “This list isn't turned on yet. Ask Laura.”）。
+- 网页里不说 coach，说 **Laura**。
 - 测试方法见 README。合成示例的正确答案：相差 5.5 秒。
 
 ## 规则
