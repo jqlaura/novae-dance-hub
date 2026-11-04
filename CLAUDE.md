@@ -1,4 +1,4 @@
-# CLAUDE.md — Novae Dance Project
+# CLAUDE.md — Novae Dance Hub
 
 > **接手先读 `HANDOFF.md`**（2026-11-04：外观、压缩、Drive 代码、上线都做完了；等用户设置 Google Drive，再填链接、在 iPhone 上测）。
 

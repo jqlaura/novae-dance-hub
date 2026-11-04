@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <!-- artifact:start -->
-<title>Fancam Compare</title>
+<title>Fancam Compare · Novae Dance Hub</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23f08cc8'/%3E%3Cstop offset='.5' stop-color='%23b49cf2'/%3E%3Cstop offset='1' stop-color='%237cc4ff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='22' fill='%2316141f'/%3E%3Cpath transform='translate(14 14) scale(.72)' d='M50 0C54 38 62 46 100 50C62 54 54 62 50 100C46 62 38 54 0 50C38 46 46 38 50 0Z' fill='url(%23g)'/%3E%3C/svg%3E">
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -603,7 +603,7 @@ function renderMembers() {
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'choice'; b.textContent = m.name;
     b.setAttribute('aria-pressed', S.member === m ? 'true' : 'false');
-    if (!m.video) { b.disabled = true; const sm = document.createElement('small'); sm.textContent = 'video not added yet'; b.append(sm); }
+    if (!hasVideo(m)) { b.disabled = true; const sm = document.createElement('small'); sm.textContent = 'video not added yet'; b.append(sm); }
     else ready++;
     b.addEventListener('click', () => chooseMember(m));
     box.append(b);
@@ -688,11 +688,16 @@ function resetMember() {
 // A member video can be a normal path/URL, or a Google Drive file: paste its share link
 // (https://drive.google.com/file/d/<ID>/view…) or write drive:<ID>. Drive files are read through
 // the Drive API with the coach's API key (driveApiKey in assignments.json).
-function videoUrl(v) {
-  const m = /^drive:([\w-]+)$/.exec(v) || /drive\.google\.com\/.*(?:\/d\/|[?&]id=)([\w-]{20,})/.exec(v);
-  if (!m) return v;
-  return `https://www.googleapis.com/drive/v3/files/${m[1]}?alt=media&key=${encodeURIComponent(S.cfg.driveApiKey || '')}`;
+function driveId(v) {
+  const m = /^drive:([\w-]+)$/.exec(v || '') || /drive\.google\.com\/.*(?:\/d\/|[?&]id=)([\w-]{20,})/.exec(v || '');
+  return m ? m[1] : null;
 }
+function videoUrl(v) {
+  const id = driveId(v);
+  return id ? `https://www.googleapis.com/drive/v3/files/${id}?alt=media&key=${encodeURIComponent(S.cfg.driveApiKey || '')}` : v;
+}
+// a Drive video can only be read once the coach has added the API key
+const hasVideo = (m) => !!m.video && !(driveId(m.video) && !S.cfg.driveApiKey);
 async function fetchWithProgress(url, onp) {
   const res = await fetch(url); if (!res.ok) throw new Error('HTTP ' + res.status);
   const total = +res.headers.get('content-length') || 0;
@@ -702,7 +707,7 @@ async function fetchWithProgress(url, onp) {
   return new Blob(parts, { type: res.headers.get('content-type') || 'video/mp4' });
 }
 async function chooseMember(m) {
-  if (S.exporting || !m.video) return;
+  if (S.exporting || !hasVideo(m)) return;
   stopPlayback(); resetMember();
   S.member = m; S.mirrorF = m.mirror !== false;
   renderMembers(); applyTransforms(); refreshSteps();
@@ -1025,7 +1030,7 @@ function updateControls() {
   $('playBtn').disabled = !ready; $('scrub').disabled = !ready; $('exportBtn').disabled = !ready;
   for (const b of document.querySelectorAll('.adjust button, #mirrorChoice button, #startNudge button')) b.disabled = S.exporting;
   const btns = $('members').querySelectorAll('button');
-  if (S.assign) S.assign.members.forEach((m, i) => { if (btns[i]) btns[i].disabled = S.exporting || !m.video; });
+  if (S.assign) S.assign.members.forEach((m, i) => { if (btns[i]) btns[i].disabled = S.exporting || !hasVideo(m); });
   for (const id of ['fileP', 'assignment', 'startRange', 'nextCand', 'sampleOwn']) $(id).disabled = S.exporting;
 }
 

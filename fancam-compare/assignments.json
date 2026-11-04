@@ -7,12 +7,12 @@
       "id": "a2o-lite-neon",
       "title": "A2O LITE — NEON",
       "members": [
-        { "name": "Young", "video": null, "mirror": true },
-        { "name": "Himeki", "video": null, "mirror": true },
-        { "name": "Vora", "video": null, "mirror": true },
-        { "name": "Xili", "video": null, "mirror": true },
-        { "name": "Rada", "video": null, "mirror": true },
-        { "name": "Merci", "video": null, "mirror": true },
+        { "name": "Young", "video": "drive:1j8H4_fzQyZ9eCl81A5FBwwrgVORcPtQZ", "mirror": true },
+        { "name": "Himeki", "video": "drive:1bKH7A5Wchwy-Rw4l09_v75aWvG8TpfkR", "mirror": true },
+        { "name": "Vora", "video": "drive:13qWSxT_u8F9inoMzsiAUeVR-k8uD_Ax9", "mirror": true },
+        { "name": "Xili", "video": "drive:1PcsDO2R1u0LJkndD1G6c2ySj-aLhSNp9", "mirror": true },
+        { "name": "Rada", "video": "drive:1HOW6xgjodMEkmLk0msFiQruTJCeLIYNa", "mirror": true },
+        { "name": "Merci", "video": "drive:189wz0sNs_v8J7KHoSAr0rg8RNTlpxs-8", "mirror": true },
         { "name": "Ayune", "video": null, "mirror": true },
         { "name": "Oa", "video": null, "mirror": true },
         { "name": "Aijing", "video": null, "mirror": true }
