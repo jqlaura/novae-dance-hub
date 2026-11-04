@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>直拍对比</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one narrow column, phone first. Steps on top, the side-by-side stage in the middle, adjust + export below. */
+:root {
+  --bg: #eef0f4;
+  --surface: #ffffff;
+  --ink: #14161c;
+  --muted: #5b6270;
+  --line: #d8dce4;
+  --accent: #e3304a;      /* stage tally-light red */
+  --accent-ink: #ffffff;
+  --practice: #2f4f8f;    /* practice pane tag */
+  --stage: #0b0c10;
+  --ok: #1f7a4d;
+  --warn: #a8640a;
+  --font-ui: -apple-system, "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-num: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1015; --surface: #171a21; --ink: #eceef2; --muted: #9aa1ae; --line: #2a2f39;
+    --accent: #ff5a6e; --accent-ink: #14161c; --practice: #8fb0f0; --stage: #000000; --ok: #4fc58a; --warn: #f0b04a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1015; --surface: #171a21; --ink: #eceef2; --muted: #9aa1ae; --line: #2a2f39;
+  --accent: #ff5a6e; --accent-ink: #14161c; --practice: #8fb0f0; --stage: #000000; --ok: #4fc58a; --warn: #f0b04a;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 560px; margin: 0 auto; padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 18px; }
+h1 { font-size: 26px; line-height: 1.2; margin: 0; letter-spacing: 0.02em; text-wrap: balance; }
+h1 .rec { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); margin-right: 10px; vertical-align: middle; transform: translateY(-2px); }
+.lede { margin: 6px 0 0; color: var(--muted); }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+.picks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pick { position: relative; background: var(--surface); border: 1.5px dashed var(--line); border-radius: 14px; padding: 14px 12px; min-width: 0;
+  display: flex; flex-direction: column; gap: 4px; cursor: pointer; }
+.pick.has { border-style: solid; }
+.pick:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.pick .tag { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; }
+.pick.p .tag { color: var(--practice); } .pick.f .tag { color: var(--accent); }
+.pick .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick .meta { font-size: 13px; color: var(--muted); }
+.sample { align-self: flex-start; background: none; border: 0; padding: 0; color: var(--muted); font: inherit; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.sample:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.status { display: flex; gap: 10px; align-items: flex-start; background: var(--surface); border-radius: 12px; padding: 12px 14px; border: 1px solid var(--line); }
+.status .dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); margin-top: 7px; }
+.status.ok .dot { background: var(--ok); } .status.warn .dot { background: var(--warn); } .status.busy .dot { background: var(--accent); animation: blink 1s infinite; }
+.status.err .dot { background: var(--accent); }
+@keyframes blink { 50% { opacity: 0.2; } }
+@media (prefers-reduced-motion: reduce) { .status.busy .dot { animation: none; } }
+.status b { font-weight: 700; }
+.status small { display: block; color: var(--muted); font-size: 13px; }
+
+.stage { background: var(--stage); border-radius: 14px; overflow: hidden; display: grid; gap: 2px; position: relative; max-width: 100%; }
+.stage.lr { grid-template-columns: 1fr 1fr; aspect-ratio: 9 / 8; }
+.stage.tb { grid-template-rows: 1fr 1fr; aspect-ratio: 8 / 9; }
+.pane { position: relative; min-width: 0; min-height: 0; background: #000; display: grid; place-items: center; }
+.pane video { width: 100%; height: 100%; object-fit: contain; display: block; }
+.pane.mirror video { transform: scaleX(-1); }
+.pane .label { position: absolute; top: 8px; left: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; padding: 2px 8px; border-radius: 6px; color: #fff; }
+.pane.p .label { background: #2f4f8f; } .pane.f .label { background: #e3304a; }
+.pane .empty { position: absolute; inset: 0; display: grid; place-items: center; color: #8a909c; font-size: 13px; text-align: center; padding: 12px; }
+.stage.swap .pane.p { order: 2; }
+
+.transport { display: flex; align-items: center; gap: 12px; }
+.play { flex: none; width: 48px; height: 48px; border-radius: 50%; border: 0; background: var(--ink); color: var(--bg); font-size: 18px; cursor: pointer; display: grid; place-items: center; }
+.play:disabled { opacity: 0.35; cursor: default; }
+.play:focus-visible, .btn:focus-visible, .seg button:focus-visible, input[type=range]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.transport input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
+.transport .time { flex: none; font-size: 13px; color: var(--muted); }
+
+.adjust { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 4px 14px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.row:last-child { border-bottom: 0; }
+.row .k { font-weight: 600; } .row .k small { display: block; font-weight: 400; color: var(--muted); font-size: 12.5px; }
+.seg { display: inline-flex; background: var(--bg); border-radius: 10px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 14px; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.12); }
+.nudge { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.nudge button { border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 8px; padding: 6px 9px; font-family: var(--font-num); font-size: 13px; cursor: pointer; }
+.offset { font-size: 13px; color: var(--muted); width: 100%; }
+
+.btn { border: 0; border-radius: 12px; padding: 14px 18px; font: inherit; font-weight: 700; font-size: 16px; cursor: pointer; background: var(--accent); color: var(--accent-ink); }
+.btn.ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--line); font-weight: 600; }
+.btn:disabled { opacity: 0.4; cursor: default; }
+.progress { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.progress i { display: block; height: 100%; width: 0%; background: var(--accent); }
+.result { display: flex; flex-direction: column; gap: 10px; }
+.result video { width: 100%; max-width: 100%; border-radius: 12px; background: #000; }
+.note { font-size: 13px; color: var(--muted); margin: 0; }
+canvas#rec { display: none; }
+[hidden] { display: none !important; }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="rec" aria-hidden="true"></span>直拍对比</h1>
+    <p class="lede">选你的练习视频和成员直拍，按音乐自动对齐，生成左右对比视频。视频只在这台手机里处理，不会上传。</p>
+  </header>
+
+  <div class="picks">
+    <label class="pick p" id="pickP">
+      <span class="tag">① 我的练习</span>
+      <span class="name" id="nameP">选择视频</span>
+      <span class="meta" id="metaP">从相册选</span>
+      <input id="fileP" type="file" accept="video/*">
+    </label>
+    <label class="pick f" id="pickF">
+      <span class="tag">② 成员直拍</span>
+      <span class="name" id="nameF">选择视频</span>
+      <span class="meta" id="metaF">从相册选</span>
+      <input id="fileF" type="file" accept="video/*">
+    </label>
+  </div>
+  <button class="sample" id="sampleBtn" type="button">没有视频？先用示例试一下</button>
+
+  <div class="status" id="status" role="status" aria-live="polite">
+    <span class="dot"></span>
+    <div><b id="statusMain">选好两个视频后自动对齐</b><small id="statusSub">两个视频要用同一首歌。开始时间不一样没关系。</small></div>
+  </div>
+
+  <button class="sample" id="nextCand" type="button" hidden>不对？换一个对齐点</button>
+
+  <div class="stage lr" id="stage">
+    <div class="pane p" id="paneP"><video id="vidP" playsinline muted preload="auto"></video><span class="label">练习</span><div class="empty" id="emptyP">练习视频</div></div>
+    <div class="pane f" id="paneF"><video id="vidF" playsinline muted preload="auto"></video><span class="label">直拍</span><div class="empty" id="emptyF">成员直拍</div></div>
+  </div>
+
+  <div class="transport">
+    <button class="play" id="playBtn" type="button" aria-label="播放" disabled>▶</button>
+    <input id="scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="进度" disabled>
+    <span class="time num" id="timeLbl">0:00 / 0:00</span>
+  </div>
+
+  <div class="adjust">
+    <div class="row">
+      <span class="k">练习视频镜像<small>照镜子练的，翻过来方向就和直拍一样</small></span>
+      <div class="seg" id="segMirror"><button type="button" data-v="0" aria-pressed="true">原样</button><button type="button" data-v="1" aria-pressed="false">镜像</button></div>
+    </div>
+    <div class="row">
+      <span class="k">排列</span>
+      <div class="seg" id="segLayout"><button type="button" data-v="lr" aria-pressed="true">左右</button><button type="button" data-v="tb" aria-pressed="false">上下</button><button type="button" data-v="swap" aria-pressed="false">互换</button></div>
+    </div>
+    <div class="row">
+      <span class="k">用哪个视频的声音</span>
+      <div class="seg" id="segAudio"><button type="button" data-v="f" aria-pressed="true">直拍</button><button type="button" data-v="p" aria-pressed="false">练习</button></div>
+    </div>
+    <div class="row">
+      <span class="k">没对准？微调练习视频<small>练习比直拍先做动作就点 +，慢了就点 −</small></span>
+      <div class="nudge" id="nudge">
+        <button type="button" data-d="-0.1">−0.1秒</button><button type="button" data-d="-0.0333">−1帧</button>
+        <button type="button" data-d="0.0333">+1帧</button><button type="button" data-d="0.1">+0.1秒</button>
+      </div>
+      <span class="offset num" id="offsetLbl"></span>
+    </div>
+  </div>
+
+  <button class="btn" id="exportBtn" type="button" disabled>生成对比视频</button>
+  <div id="exporting" hidden>
+    <div class="progress"><i id="bar"></i></div>
+    <p class="note" id="exportNote">正在录制，请保持屏幕亮着，不要切到别的 App。</p>
+  </div>
+  <div class="result" id="result" hidden>
+    <video id="outVid" controls playsinline></video>
+    <button class="btn" id="saveBtn" type="button">保存到手机</button>
+    <p class="note" id="saveNote"></p>
+  </div>
+  <canvas id="rec"></canvas>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = (id) => document.getElementById(id);
+const FPS_ENV = 100;              // analysis frames per second
+const AN_SR = 24000, AN_HOP = 240, AN_WIN = 512;
+
+const S = {
+  file: { p: null, f: null }, url: { p: null, f: null }, dur: { p: 0, f: 0 },
+  audio: { p: null, f: null }, env: { p: null, f: null },
+  d: 0,             // fancam time = practice time + d
+  aligned: false, mirror: false, layout: 'lr', swap: false, audioFrom: 'f',
+  playing: false, T: 0, L: 0, t0: 0, src: null, exporting: false,
+  outBlob: null, outExt: 'mp4',
+};
+let actx = null;
+const getCtx = () => (actx ||= new (window.AudioContext || window.webkitAudioContext)());
+const vid = { p: $('vidP'), f: $('vidF') };
+
+// ---------- status ----------
+function status(kind, main, sub = '') {
+  $('status').className = 'status ' + kind;
+  $('statusMain').textContent = main; $('statusSub').textContent = sub;
+}
+const fmt = (s) => { s = Math.max(0, s); const m = Math.floor(s / 60); return m + ':' + String(Math.floor(s % 60)).padStart(2, '0'); };
+
+// ---------- FFT (radix-2, in place) ----------
+function fft(re, im, inverse) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = (inverse ? 2 : -2) * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let k = 0; k < len / 2; k++) {
+        const a = i + k, b = a + len / 2;
+        const xr = re[b] * cr - im[b] * ci, xi = re[b] * ci + im[b] * cr;
+        re[b] = re[a] - xr; im[b] = im[a] - xi; re[a] += xr; im[a] += xi;
+        const t = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = t;
+      }
+    }
+  }
+  if (inverse) for (let i = 0; i < n; i++) { re[i] /= n; im[i] /= n; }
+}
+
+// ---------- audio → onset envelope ----------
+function decode(buf) {
+  const ctx = getCtx();
+  return new Promise((res, rej) => {
+    const p = ctx.decodeAudioData(buf, res, rej);
+    if (p && p.then) p.then(res, rej);
+  });
+}
+// ---------- MP4 / MOV: pull the AAC audio track out ourselves ----------
+// Safari often refuses decodeAudioData on a whole .MOV video. Extracting the AAC frames,
+// wrapping them as ADTS and decoding that works everywhere, and only reads the audio bytes.
+const fourcc = (dv, o) => String.fromCharCode(dv.getUint8(o), dv.getUint8(o + 1), dv.getUint8(o + 2), dv.getUint8(o + 3));
+const u64 = (dv, o) => dv.getUint32(o) * 4294967296 + dv.getUint32(o + 4);
+async function readDV(file, start, len) { return new DataView(await file.slice(start, start + len).arrayBuffer()); }
+function kids(dv, start, end) {
+  const out = [];
+  for (let o = start; o + 8 <= end;) {
+    let size = dv.getUint32(o), hdr = 8; const type = fourcc(dv, o + 4);
+    if (size === 1) { size = u64(dv, o + 8); hdr = 16; } else if (size === 0) size = end - o;
+    if (size < hdr || o + size > end) break;
+    out.push({ type, start: o + hdr, end: o + size }); o += size;
+  }
+  return out;
+}
+const kid = (dv, box, type) => kids(dv, box.start, box.end).find((b) => b.type === type);
+async function demuxAAC(file) {
+  // find moov among the top-level boxes (it can sit after a huge mdat)
+  let moov = null;
+  for (let off = 0; off + 8 <= file.size;) {
+    const h = await readDV(file, off, 16);
+    let size = h.getUint32(0), hdr = 8; const type = fourcc(h, 4);
+    if (!/^[a-z0-9 ]{4}$/i.test(type)) throw new Error('不是 MP4/MOV 结构');
+    if (size === 1) { size = u64(h, 8); hdr = 16; } else if (size === 0) size = file.size - off;
+    if (size < hdr) throw new Error('盒子大小不对');
+    if (type === 'moov') { moov = { off, size }; break; }
+    off += size;
+  }
+  if (!moov) throw new Error('找不到 moov');
+  const dv = await readDV(file, moov.off, moov.size);
+  const root = { start: 8, end: moov.size };
+  const mvhd = kid(dv, root, 'mvhd');
+  const movieScale = mvhd ? dv.getUint32(mvhd.start + (dv.getUint8(mvhd.start) === 1 ? 20 : 12)) : 0;
+  const skipped = [];
+  for (const trak of kids(dv, root.start, root.end).filter((b) => b.type === 'trak')) {
+    const mdia = kid(dv, trak, 'mdia'); if (!mdia) continue;
+    const hdlr = kid(dv, mdia, 'hdlr'); if (!hdlr || fourcc(dv, hdlr.start + 8) !== 'soun') continue;
+    const mdhd = kid(dv, mdia, 'mdhd');
+    const mediaScale = dv.getUint32(mdhd.start + (dv.getUint8(mdhd.start) === 1 ? 20 : 12));
+    const stbl = kid(dv, kid(dv, mdia, 'minf'), 'stbl');
+    const stsd = kid(dv, stbl, 'stsd');
+    const entry = kids(dv, stsd.start + 8, stsd.end)[0];
+    if (!entry || entry.type !== 'mp4a') { skipped.push(entry ? entry.type.trim() : '未知'); continue; }   // e.g. iPhone spatial audio track
+    // find esds anywhere inside the sample entry (plain MP4, or wrapped in QuickTime 'wave')
+    let esds = -1;
+    for (let o = entry.start; o + 4 <= entry.end; o++) if (fourcc(dv, o) === 'esds') { esds = o + 4; break; }
+    if (esds < 0) throw new Error('找不到 esds');
+    let p = esds + 4;                                   // skip version/flags
+    const desc = () => { const tag = dv.getUint8(p++); let len = 0, b; do { b = dv.getUint8(p++); len = (len << 7) | (b & 0x7f); } while (b & 0x80); return { tag, len }; };
+    let d = desc(); if (d.tag !== 3) throw new Error('esds 格式不对');
+    p += 2; const fl = dv.getUint8(p++); if (fl & 0x80) p += 2; if (fl & 0x40) p += 1 + dv.getUint8(p); if (fl & 0x20) p += 2;
+    d = desc(); if (d.tag !== 4) throw new Error('esds 格式不对');
+    p += 13; d = desc(); if (d.tag !== 5) throw new Error('缺少 AAC 配置');
+    const asc = [dv.getUint8(p), dv.getUint8(p + 1), dv.getUint8(p + 2), dv.getUint8(p + 3)];
+    const bits = (asc[0] << 24 | asc[1] << 16 | asc[2] << 8 | asc[3]) >>> 0;
+    let aot = bits >>> 27, sfi = (bits >>> 23) & 15, ch = (bits >>> 19) & 15;
+    if (aot === 5 || aot === 29) aot = 2;              // HE-AAC: send the AAC-LC core, decoders add SBR
+    if (aot < 1 || aot > 4 || sfi > 12) throw new Error('这种 AAC（类型 ' + aot + '）不支持');
+    // sample table
+    const stsz = kid(dv, stbl, 'stsz'), stsc = kid(dv, stbl, 'stsc'), stco = kid(dv, stbl, 'stco') || kid(dv, stbl, 'co64');
+    const fixed = dv.getUint32(stsz.start + 4), count = dv.getUint32(stsz.start + 8);
+    const sizes = new Uint32Array(count);
+    for (let i = 0; i < count; i++) sizes[i] = fixed || dv.getUint32(stsz.start + 12 + 4 * i);
+    const nChunks = dv.getUint32(stco.start + 4);
+    const chunkOff = (i) => (stco.type === 'co64' ? u64(dv, stco.start + 8 + 8 * i) : dv.getUint32(stco.start + 8 + 4 * i));
+    const nsc = dv.getUint32(stsc.start + 4), sc = [];
+    for (let i = 0; i < nsc; i++) sc.push([dv.getUint32(stsc.start + 8 + 12 * i), dv.getUint32(stsc.start + 12 + 12 * i)]);
+    // build ADTS
+    let total = 0; for (const s of sizes) total += s + 7;
+    const out = new Uint8Array(total); let w = 0, si = 0;
+    for (let c = 0; c < nChunks && si < count; c++) {
+      let k = sc.length - 1; while (k > 0 && sc[k][0] > c + 1) k--;
+      const n = Math.min(sc[k][1], count - si);
+      let bytes = 0; for (let j = 0; j < n; j++) bytes += sizes[si + j];
+      const chunk = new Uint8Array(await file.slice(chunkOff(c), chunkOff(c) + bytes).arrayBuffer());
+      let r = 0;
+      for (let j = 0; j < n; j++, si++) {
+        const len = sizes[si] + 7;
+        out[w] = 0xff; out[w + 1] = 0xf1;
+        out[w + 2] = ((aot - 1) << 6) | (sfi << 2) | ((ch >> 2) & 1);
+        out[w + 3] = ((ch & 3) << 6) | ((len >> 11) & 3);
+        out[w + 4] = (len >> 3) & 0xff; out[w + 5] = ((len & 7) << 5) | 0x1f; out[w + 6] = 0xfc;
+        out.set(chunk.subarray(r, r + sizes[si]), w + 7); w += len; r += sizes[si];
+      }
+    }
+    // edit list: leading empty edit = silence before the audio, media_time = samples to skip
+    let pad = 0, skip = 0;
+    const elst = kid(dv, trak, 'edts') && kid(dv, kid(dv, trak, 'edts'), 'elst');
+    if (elst) {
+      const v1 = dv.getUint8(elst.start) === 1, n = dv.getUint32(elst.start + 4), sz = v1 ? 20 : 12;
+      for (let i = 0; i < n; i++) {
+        const o = elst.start + 8 + sz * i;
+        const dur = v1 ? u64(dv, o) : dv.getUint32(o), mt = v1 ? dv.getInt32(o + 12) : dv.getInt32(o + 4);
+        if (mt === -1) { if (movieScale) pad += dur / movieScale; continue; }
+        skip = mt / mediaScale; break;
+      }
+    }
+    return { adts: out.buffer, pad, skip };
+  }
+  throw new Error(skipped.length ? '音频编码是 ' + skipped.join('/') + '，不是 AAC' : '视频里没有音轨');
+}
+async function decodeVideoAudio(file) {
+  const errs = [];
+  try {
+    const { adts, pad, skip } = await demuxAAC(file);
+    let ab = await decode(adts);
+    if (pad || skip) {
+      const ctx = getCtx(), sr = ab.sampleRate, s0 = Math.round(skip * sr), p0 = Math.round(pad * sr);
+      const len = Math.max(1, ab.length - s0 + p0), nb = ctx.createBuffer(ab.numberOfChannels, len, sr);
+      for (let c = 0; c < ab.numberOfChannels; c++) nb.getChannelData(c).set(ab.getChannelData(c).subarray(s0), p0);
+      ab = nb;
+    }
+    return { ab, how: '拆音轨' };
+  } catch (e) { errs.push('拆音轨：' + (e && e.message || e)); }
+  try {
+    return { ab: await decode(await file.arrayBuffer()), how: '整体解码' };
+  } catch (e) { errs.push('整体解码：' + ((e && (e.name + ' ' + (e.message || ''))) || e)); }
+  const err = new Error(errs.join('；')); err.details = errs; throw err;
+}
+
+async function toMono(audioBuf) {
+  const len = Math.ceil(audioBuf.duration * AN_SR);
+  const off = new OfflineAudioContext(1, len, AN_SR);
+  const s = off.createBufferSource(); s.buffer = audioBuf; s.connect(off.destination); s.start();
+  const r = await off.startRendering();
+  return r.getChannelData(0);
+}
+function onsetEnvelope(x) {
+  const frames = Math.max(0, Math.floor((x.length - AN_WIN) / AN_HOP));
+  const env = new Float32Array(frames);
+  const win = new Float32Array(AN_WIN);
+  for (let i = 0; i < AN_WIN; i++) win[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / AN_WIN);
+  const re = new Float64Array(AN_WIN), im = new Float64Array(AN_WIN);
+  const half = AN_WIN / 2; let prev = new Float32Array(half), cur = new Float32Array(half);
+  for (let fI = 0; fI < frames; fI++) {
+    const o = fI * AN_HOP;
+    for (let i = 0; i < AN_WIN; i++) { re[i] = x[o + i] * win[i]; im[i] = 0; }
+    fft(re, im, false);
+    let flux = 0;
+    for (let k = 1; k < half; k++) {
+      cur[k] = Math.log1p(100 * Math.hypot(re[k], im[k]));
+      const dlt = cur[k] - prev[k]; if (dlt > 0) flux += dlt;
+    }
+    env[fI] = fI < 3 ? 0 : flux; [prev, cur] = [cur, prev];   // the first frames have no "before" to compare with
+  }
+  // remove slow loudness changes (crowd swells, fades), keep the hits
+  const W = 50, out = new Float32Array(frames); let acc = 0;
+  const cs = new Float64Array(frames + 1); for (let i = 0; i < frames; i++) cs[i + 1] = cs[i] + env[i];
+  for (let i = 0; i < frames; i++) {
+    const a = Math.max(0, i - W), b = Math.min(frames, i + W + 1);
+    out[i] = Math.max(0, env[i] - (cs[b] - cs[a]) / (b - a));
+  }
+  let m = 0; for (const v of out) m += v; m /= frames || 1;
+  let sd = 0; for (const v of out) sd += (v - m) ** 2; sd = Math.sqrt(sd / (frames || 1)) || 1;
+  for (let i = 0; i < frames; i++) out[i] = Math.min(6, (out[i] - m) / sd);   // one loud bang should not decide the match
+  return out;
+}
+// returns { d, ratio, candidates } with fancamTime = practiceTime + d
+function align(ep, ef) {
+  let n = 1; while (n < ep.length + ef.length) n <<= 1;
+  const ar = new Float64Array(n), ai = new Float64Array(n), br = new Float64Array(n), bi = new Float64Array(n);
+  ar.set(ep); br.set(ef);
+  fft(ar, ai, false); fft(br, bi, false);
+  for (let i = 0; i < n; i++) {               // B * conj(A)
+    const r = br[i] * ar[i] + bi[i] * ai[i], im = bi[i] * ar[i] - br[i] * ai[i];
+    br[i] = r; bi[i] = im;
+  }
+  fft(br, bi, true);
+  const minOverlap = Math.min(3 * FPS_ENV, Math.floor(Math.min(ep.length, ef.length) * 0.5));
+  const lagAt = (i) => (i < n / 2 ? i : i - n);
+  const valid = (k) => Math.min(ep.length, ef.length - k) - Math.max(0, -k) >= minOverlap;
+  // pick the 3 best offsets, each at least 0.4 s apart (a wrong match is usually off by whole beats)
+  const picks = [];
+  for (let c = 0; c < 3; c++) {
+    let best = -Infinity, bi0 = -1;
+    for (let i = 0; i < n; i++) {
+      const k = lagAt(i); if (!valid(k)) continue;
+      if (picks.some((p) => Math.abs(k - p.k) < 0.4 * FPS_ENV)) continue;
+      if (br[i] > best) { best = br[i]; bi0 = i; }
+    }
+    if (bi0 < 0) break;
+    const y0 = br[(bi0 - 1 + n) % n], y1 = br[bi0], y2 = br[(bi0 + 1) % n];      // sub-frame refinement
+    const den = y0 - 2 * y1 + y2, frac = den ? Math.max(-0.5, Math.min(0.5, 0.5 * (y0 - y2) / den)) : 0;
+    picks.push({ k: lagAt(bi0), d: (lagAt(bi0) + frac) / FPS_ENV, score: best });
+  }
+  const ratio = picks.length > 1 && picks[1].score > 0 ? picks[0].score / picks[1].score : 9;
+  return { d: picks[0].d, ratio, candidates: picks.map((p) => p.d) };
+}
+
+// ---------- loading files ----------
+async function loadFile(which, file) {
+  stopPlayback();
+  S.aligned = false; S.env[which] = null; S.audio[which] = null; updateControls();
+  if (S.url[which]) URL.revokeObjectURL(S.url[which]);
+  S.file[which] = file; S.url[which] = URL.createObjectURL(file);
+  const v = vid[which]; v.src = S.url[which]; v.load();
+  $(which === 'p' ? 'emptyP' : 'emptyF').hidden = true;
+  $(which === 'p' ? 'pickP' : 'pickF').classList.add('has');
+  $(which === 'p' ? 'nameP' : 'nameF').textContent = file.name || (which === 'p' ? '练习视频' : '直拍');
+  const meta = $(which === 'p' ? 'metaP' : 'metaF');
+  meta.textContent = (file.size / 1048576).toFixed(1) + ' MB · 读取中…';
+  try {
+    status('busy', '正在读取声音…', '视频越长越慢，手机上一般几秒到半分钟。');
+    const { ab, how } = await decodeVideoAudio(file);
+    S.how = S.how || {}; S.how[which] = how;
+    S.audio[which] = ab; S.dur[which] = ab.duration;
+    meta.textContent = (file.size / 1048576).toFixed(1) + ' MB · ' + fmt(ab.duration);
+    S.env[which] = onsetEnvelope(await toMono(ab));
+  } catch (e) {
+    console.error(e);
+    meta.textContent = '读不出声音';
+    const ext = (file.name.split('.').pop() || '?').toUpperCase();
+    status('err', '这个视频的声音读不出来', `${ext} · ${file.type || '类型未知'} · ${(file.size / 1048576).toFixed(1)} MB。原因：${e && e.message || e}。截图发给做网页的人。`);
+    return;
+  }
+  await waitMeta(v); S.dur[which] = Math.min(S.dur[which] || Infinity, v.duration || Infinity);
+  if (S.env.p && S.env.f) runAlign();
+  else status('', which === 'p' ? '再选成员直拍' : '再选你的练习视频', '两个都选好就会自动对齐。');
+}
+const waitMeta = (v) => v.readyState >= 1 ? Promise.resolve() : new Promise((r) => v.addEventListener('loadedmetadata', r, { once: true }));
+
+function runAlign() {
+  status('busy', '正在按音乐对齐…');
+  const r = align(S.env.p, S.env.f);
+  S.lastAlign = r; S.cand = r.candidates; S.candIdx = 0;
+  S.d = r.d; S.aligned = true; S.T = 0;
+  const sure = r.ratio >= 1.05;
+  showAlignStatus(sure ? 'ok' : 'warn', sure ? '对齐好了' : '对齐了，请看一下');
+  autoLayout(); recompute(); seekAll(0); updateControls();
+}
+function showAlignStatus(kind, main) {
+  const lead = Math.abs(S.d).toFixed(2);
+  const who = S.d > 0 ? '直拍里音乐晚开始 ' : '练习视频里音乐晚开始 ';
+  status(kind, main, who + lead + ' 秒。点 ▶ 看一下，动作对不上就点“换一个对齐点”或微调。');
+  $('nextCand').hidden = !(S.cand && S.cand.length > 1);
+  if (S.cand) $('nextCand').textContent = `不对？换一个对齐点（${S.candIdx + 1}/${S.cand.length}）`;
+}
+
+// ---------- timeline ----------
+function starts() {           // where each video starts when timeline T = 0
+  const sp = Math.max(0, -S.d), sf = sp + S.d;
+  return { p: sp, f: sf };
+}
+function recompute() {
+  const s = starts();
+  S.L = Math.max(0, Math.min(S.dur.p - s.p, S.dur.f - s.f));
+  S.T = Math.min(S.T, S.L);
+  const sign = S.d >= 0 ? '+' : '−';
+  $('offsetLbl').textContent = `差 ${sign}${Math.abs(S.d).toFixed(3)} 秒 · 对比长度 ${fmt(S.L)}`;
+  updateTime();
+}
+function seekAll(T) {
+  S.T = T; const s = starts();
+  for (const k of ['p', 'f']) { try { vid[k].currentTime = Math.min(s[k] + T, (vid[k].duration || 1e9) - 0.05); } catch (e) {} }
+  updateTime();
+}
+function updateTime() {
+  $('timeLbl').textContent = fmt(S.T) + ' / ' + fmt(S.L);
+  if (!scrubbing) $('scrub').value = S.L ? Math.round(1000 * S.T / S.L) : 0;
+  if (S.exporting) $('bar').style.width = (100 * S.T / S.L).toFixed(1) + '%';
+}
+
+// Preview: the video whose sound we use plays on its own, with its own sound (so the iPhone
+// silent switch does not mute it). The other video follows it by nudging its speed a little.
+// Seeking is the last resort: on a phone each seek freezes the picture for a moment.
+const other = (k) => (k === 'p' ? 'f' : 'p');
+function follow(v, target, now) {
+  if (v.seeking) return;
+  const drift = v.currentTime - target;
+  if (Math.abs(drift) > 0.8 && now - (v._lastSeek || 0) > 2500) {
+    v.currentTime = Math.max(0, target + 0.2);       // land a bit ahead: the seek itself takes time
+    v._lastSeek = now; return;
+  }
+  const a = Math.abs(drift);
+  const rate = S.exporting
+    ? (a < 0.015 ? 1 : Math.round(Math.max(0.9, Math.min(1.1, 1 - drift * 2)) * 100) / 100)   // recording: follow tightly
+    : (a < 0.03 ? 1 : drift > 0 ? (a > 0.2 ? 0.9 : 0.96) : (a > 0.2 ? 1.1 : 1.04));          // preview: few, small changes
+  if (v.playbackRate !== rate) v.playbackRate = rate;
+}
+function play() {                     // called straight from the tap, so the phone allows sound
+  if (!S.aligned || S.exporting) return;
+  if (S.T >= S.L - 0.05) seekAll(0);
+  const m = vid[S.audioFrom], sl = vid[other(S.audioFrom)];
+  sl.muted = true; m.muted = false; m.volume = 1; m.playbackRate = 1; sl.playbackRate = 1;
+  const pm = m.play(); sl.play().catch(() => {});
+  if (pm && pm.catch) pm.catch(() => { m.muted = true; m.play().catch(() => {}); status('warn', '没法放声音', '再点一次 ▶ 试试。'); });
+  S.playing = true; setPlayBtn(true);
+  requestAnimationFrame(tick);
+}
+function setPlayBtn(on) { $('playBtn').textContent = on ? '❚❚' : '▶'; $('playBtn').setAttribute('aria-label', on ? '暂停' : '播放'); }
+function stopPlayback() {
+  if (S.src) { try { S.src.stop(); } catch (e) {} S.src = null; }
+  for (const k of ['p', 'f']) { vid[k].pause(); vid[k].playbackRate = 1; vid[k].muted = true; }
+  const was = S.playing; S.playing = false; setPlayBtn(false);
+  if (was && !S.exporting && S.aligned) seekAll(S.T);   // line both up again while paused
+}
+function clockT() {
+  if (S.exporting) return getCtx().currentTime - S.t0;
+  const k = S.audioFrom; return vid[k].currentTime - starts()[k];
+}
+function tick() {
+  if (!S.playing) return;
+  const T = clockT(), now = performance.now();
+  if (T >= S.L || (!S.exporting && vid[S.audioFrom].ended)) {
+    S.T = Math.min(T, S.L); updateTime(); stopPlayback(); if (S.exporting) finishExport(); return;
+  }
+  if (T >= 0) {
+    S.T = T; const s = starts();
+    // when recording, the picture reaches the file ~0.1 s later than the sound, so run the videos that much ahead
+    const lead = S.exporting ? 0.1 : 0;
+    for (const k of S.exporting ? ['p', 'f'] : [other(S.audioFrom)]) {
+      const v = vid[k];
+      follow(v, s[k] + T + lead, now);
+      if (v.paused && !v.ended) v.play().catch(() => {});
+    }
+    updateTime();
+    if (S.exporting) drawFrame();
+  }
+  requestAnimationFrame(tick);
+}
+
+// ---------- layout ----------
+function autoLayout() {
+  const portrait = (v) => (v.videoHeight || 16) >= (v.videoWidth || 9);
+  setLayout(portrait(vid.p) && portrait(vid.f) ? 'lr' : 'tb');
+}
+function setLayout(l) {
+  S.layout = l; const st = $('stage');
+  st.classList.toggle('lr', l === 'lr'); st.classList.toggle('tb', l === 'tb');
+  pressSeg('segLayout', (b) => b.dataset.v === l || (b.dataset.v === 'swap' && S.swap));
+}
+function pressSeg(id, fn) { for (const b of $(id).querySelectorAll('button')) b.setAttribute('aria-pressed', fn(b) ? 'true' : 'false'); }
+
+// ---------- export ----------
+function pickMime() {
+  const c = ['video/mp4;codecs="avc1.42E01E,mp4a.40.2"', 'video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+  for (const m of c) if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
+  return '';
+}
+let rec = null, chunks = [], cv = $('rec'), g = cv.getContext('2d');
+function canvasSize() { return S.layout === 'lr' ? [1080, 960] : [960, 1080]; }
+function drawFrame() {
+  const [W, H] = [cv.width, cv.height];
+  g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+  const order = S.swap ? ['f', 'p'] : ['p', 'f'];
+  order.forEach((k, i) => {
+    const box = S.layout === 'lr' ? [i * W / 2, 0, W / 2, H] : [0, i * H / 2, W, H / 2];
+    const v = vid[k]; const vw = v.videoWidth, vh = v.videoHeight; if (!vw) return;
+    const sc = Math.min(box[2] / vw, box[3] / vh), dw = vw * sc, dh = vh * sc;
+    const dx = box[0] + (box[2] - dw) / 2, dy = box[1] + (box[3] - dh) / 2;
+    g.save();
+    if (k === 'p' && S.mirror) { g.translate(dx + dw, dy); g.scale(-1, 1); g.drawImage(v, 0, 0, dw, dh); }
+    else g.drawImage(v, dx, dy, dw, dh);
+    g.restore();
+    g.font = '700 26px ' + getComputedStyle(document.body).fontFamily;
+    const label = k === 'p' ? '练习' : '直拍';
+    const tw = g.measureText(label).width;
+    g.fillStyle = k === 'p' ? '#2f4f8f' : '#e3304a';
+    g.fillRect(box[0] + 14, box[1] + 14, tw + 20, 38);
+    g.fillStyle = '#fff'; g.fillText(label, box[0] + 24, box[1] + 43);
+  });
+  if (S.layout === 'lr') { g.fillStyle = '#000'; g.fillRect(W / 2 - 2, 0, 4, H); } else { g.fillStyle = '#000'; g.fillRect(0, H / 2 - 2, W, 4); }
+}
+async function startExport() {
+  const mime = pickMime();
+  if (!mime || !cv.captureStream) { status('err', '这个浏览器不能生成视频', '请用手机自带的 Safari 或 Chrome 打开这个网页。'); return; }
+  stopPlayback();
+  const ctx = getCtx();
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}   // play through the silent switch
+  const resumed = ctx.state !== 'running' ? ctx.resume() : null;      // must start inside the tap
+  [cv.width, cv.height] = canvasSize();
+  S.outExt = mime.includes('mp4') ? 'mp4' : 'webm';
+  const dest = ctx.createMediaStreamDestination();
+  const stream = new MediaStream([...cv.captureStream(30).getVideoTracks(), ...dest.stream.getAudioTracks()]);
+  chunks = [];
+  rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6_000_000 });
+  rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+  rec.onstop = onRecorded;
+  S.exporting = true; S.T = 0; updateControls();
+  $('exporting').hidden = false; $('result').hidden = true;
+  status('busy', '正在生成对比视频…', '按实际长度录制，' + fmt(S.L) + ' 的视频要录 ' + fmt(S.L) + '。');
+  if (resumed) await resumed;
+  try { wake = await navigator.wakeLock?.request('screen'); } catch (e) {}
+  seekAll(0);
+  // start recording first and keep feeding it pictures, so sound and picture share one starting point
+  let preroll = true; drawFrame(); rec.start(500);
+  (function feed() { if (!preroll) return; drawFrame(); requestAnimationFrame(feed); })();
+  const once = (v, ev) => new Promise((r) => { v.addEventListener(ev, r, { once: true }); setTimeout(r, 4000); });
+  await Promise.all(['p', 'f'].map((k) => (vid[k].seeking ? once(vid[k], 'seeked') : null)));
+  // get both videos actually moving first, then start the sound exactly where the audio-source video is
+  for (const k of ['p', 'f']) { vid[k].muted = true; vid[k].playbackRate = 1; }
+  await Promise.all(['p', 'f'].map((k) => { const pr = once(vid[k], 'playing'); vid[k].play().catch(() => {}); return pr; }));
+  const k = S.audioFrom, s = starts(), lead = 0.12;
+  const T0 = Math.max(0, vid[k].currentTime - s[k] + lead), when = ctx.currentTime + lead;
+  const src = ctx.createBufferSource(); src.buffer = S.audio[k];
+  src.connect(dest); src.connect(ctx.destination);
+  src.start(when, s[k] + T0); S.src = src; S.t0 = when - T0;
+  preroll = false;
+  S.playing = true; requestAnimationFrame(tick);
+}
+let wake = null;
+function finishExport() { if (rec && rec.state !== 'inactive') setTimeout(() => rec.stop(), 300); }
+function onRecorded() {
+  S.exporting = false; try { wake?.release(); } catch (e) {} wake = null;
+  S.outBlob = new Blob(chunks, { type: chunks[0]?.type || (S.outExt === 'mp4' ? 'video/mp4' : 'video/webm') });
+  $('outVid').src = URL.createObjectURL(S.outBlob);
+  $('exporting').hidden = true; $('result').hidden = false; $('saveNote').textContent = '';
+  status('ok', '对比视频做好了', (S.outBlob.size / 1048576).toFixed(1) + ' MB。先在下面看一遍，再保存。');
+  updateControls();
+  $('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+async function save() {
+  const name = '直拍对比.' + S.outExt;
+  let dl = null;
+  try { dl = window.claude?.use ? await window.claude.use('downloads') : null; } catch (e) {}
+  if (dl) {
+    try { await dl.save({ filename: name, data: S.outBlob }); $('saveNote').textContent = '已保存。'; }
+    catch (e) { $('saveNote').textContent = e?.code === 'declined' ? '没有保存。' : '保存没成功：' + (e?.message || e?.code || ''); }
+    return;
+  }
+  const a = document.createElement('a'); a.href = $('outVid').src; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  $('saveNote').textContent = '如果没有弹出保存，可以在上面的视频里点 ⋯ 或长按保存。';
+}
+
+// ---------- controls ----------
+function updateControls() {
+  const ready = S.aligned && !S.exporting;
+  $('playBtn').disabled = !ready; $('scrub').disabled = !ready; $('exportBtn').disabled = !ready;
+  for (const b of document.querySelectorAll('.adjust button')) b.disabled = S.exporting;
+  $('fileP').disabled = $('fileF').disabled = S.exporting; $('nextCand').disabled = S.exporting;
+}
+let scrubbing = false;
+$('fileP').addEventListener('change', (e) => e.target.files[0] && loadFile('p', e.target.files[0]));
+$('fileF').addEventListener('change', (e) => e.target.files[0] && loadFile('f', e.target.files[0]));
+$('playBtn').addEventListener('click', () => (S.playing ? stopPlayback() : play()));
+$('scrub').addEventListener('input', (e) => { scrubbing = true; const was = S.playing; stopPlayback(); seekAll(S.L * e.target.value / 1000); scrubbing = false; if (was) play(); });
+$('segMirror').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; S.mirror = b.dataset.v === '1'; $('paneP').classList.toggle('mirror', S.mirror); pressSeg('segMirror', (x) => x === b); });
+$('segLayout').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.v === 'swap') { S.swap = !S.swap; $('stage').classList.toggle('swap', S.swap); setLayout(S.layout); }
+  else setLayout(b.dataset.v);
+});
+$('segAudio').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return; S.audioFrom = b.dataset.v; pressSeg('segAudio', (x) => x === b);
+  if (S.playing) { stopPlayback(); play(); }
+});
+$('nudge').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b || !S.aligned) return;
+  // + delays the practice picture relative to the fancam
+  S.d += parseFloat(b.dataset.d);
+  const was = S.playing; stopPlayback(); recompute(); seekAll(S.T); if (was) play();
+});
+$('exportBtn').addEventListener('click', startExport);
+$('nextCand').addEventListener('click', () => {
+  if (!S.cand || S.exporting) return;
+  S.candIdx = (S.candIdx + 1) % S.cand.length; S.d = S.cand[S.candIdx];
+  const was = S.playing; stopPlayback(); recompute(); seekAll(0);
+  showAlignStatus(S.candIdx === 0 ? 'ok' : 'warn', S.candIdx === 0 ? '回到第一个对齐点' : `换成第 ${S.candIdx + 1} 个对齐点`);
+  if (was) play();
+});
+$('saveBtn').addEventListener('click', save);
+
+// sample videos published alongside the page
+$('sampleBtn').addEventListener('click', async () => {
+  const ext = vid.p.canPlayType('video/mp4; codecs="avc1.4D401E"') ? 'mp4' : 'webm';
+  try {
+    status('busy', '正在加载示例…');
+    const get = async (n, label) => new File([await (await fetch('samples/' + n + '.' + ext)).blob()], label + '.' + ext, { type: 'video/' + ext });
+    const [p, f] = await Promise.all([get('practice', '示例_练习'), get('fancam', '示例_直拍')]);
+    await loadFile('p', p); await loadFile('f', f);
+  } catch (e) { console.error(e); status('err', '示例没加载出来', '直接选你自己的两个视频也可以。'); }
+});
+
+window.__dance = S; S._t = { align, decodeVideoAudio, decode, onsetEnvelope, toMono }; // for testing
+updateControls();
+})();
+</script>
+
+</body>
+</html>
