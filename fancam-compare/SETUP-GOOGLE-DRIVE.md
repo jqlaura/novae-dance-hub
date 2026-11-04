@@ -1,6 +1,6 @@
 # 设置 Google Drive（教练做一次就行）
 
-一共三部分，全部免费，大约 20 分钟。都用**同一个 Google 账号**做。
+一共四部分（A–C 是 Google，D 是 GitHub），全部免费，大约 25 分钟。都用**同一个 Google 账号**做。
 
 | 部分 | 做什么 | 做完给我什么 |
 |---|---|---|
@@ -65,6 +65,17 @@
 ### 以后要改口令
 
 改 `TEAM_CODE` → ⌘S 保存 → **Deploy → Manage deployments** → 点铅笔 ✏ → **Version** 选 **New version** → **Deploy**。网址不变。
+
+---
+
+## D. 网页上线（GitHub Pages）
+
+我已经检查过仓库：没有孩子的视频、口令或密钥，历史里的视频都是合成的假视频。可以公开。
+
+1. 打开 <https://github.com/jqlaura/novae-dance-project>，登录 → 上方 **Settings**。
+2. 拉到最下面 **Danger Zone** → **Change visibility** → **Change to public**，按提示确认。
+3. 左边点 **Pages**。**Build and deployment** 下面：Source 选 **Deploy from a branch**，Branch 选 **main**、文件夹 **/ (root)** → **Save**。
+4. 等 1–2 分钟，刷新这个页面，上方会显示网址：**https://jqlaura.github.io/novae-dance-project/**（会自动跳到直拍对比页面）。这就是发给孩子的链接。
 
 ---
 
