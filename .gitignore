@@ -1,4 +1,4 @@
 fancam-compare/tests/tmp/
 __pycache__/
 .DS_Store
-frames.raw
+*.raw
