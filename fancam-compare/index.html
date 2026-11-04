@@ -327,7 +327,7 @@ const AN_SR = 24000, AN_HOP = 240, AN_WIN = 512;
 const S = {
   assignments: [], assign: null, member: null, memberCache: {}, loadToken: 0,
   file: { p: null }, url: { p: null, f: null }, dur: { p: 0, f: 0 },
-  audio: { p: null, f: null }, env: { p: null, f: null }, ownError: false,
+  audio: { p: null, f: null }, env: { p: null, f: null }, chr: { p: null, f: null }, ownError: false,
   d: 0,             // member time = practice time + d
   aligned: false, cand: null, candIdx: 0, lastAlign: null,
   crop: { z: 1, x: 0, y: 0 }, mirror: true, mirrorAnswered: true, mirrorF: true,
@@ -536,6 +536,66 @@ function onsetEnvelope(x) {
   for (let i = 0; i < frames; i++) out[i] = Math.min(6, (out[i] - m) / sd);   // one loud bang should not decide the match
   return out;
 }
+// ---------- melody/chords (chroma) ----------
+// Beats alone fail when the practice music is the studio track and the fancam has the live stage
+// sound: the drum hits differ, the notes don't. So we first find WHERE in the song by the notes
+// (12 pitch classes, 10 times a second), then fine-tune to the frame with the beats.
+const CH_FPS = 10, CH_WIN = 4096, CH_HOP = AN_SR / CH_FPS;
+function chromaSeq(x) {
+  const frames = Math.max(0, Math.floor((x.length - CH_WIN) / CH_HOP));
+  const pc = new Int8Array(CH_WIN / 2).fill(-1);
+  for (let k = 1; k < CH_WIN / 2; k++) { const f = k * AN_SR / CH_WIN; if (f > 80 && f < 2000) pc[k] = ((Math.round(12 * Math.log2(f / 440)) % 12) + 12) % 12; }
+  const win = new Float32Array(CH_WIN); for (let i = 0; i < CH_WIN; i++) win[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / CH_WIN);
+  const re = new Float64Array(CH_WIN), im = new Float64Array(CH_WIN), raw = new Float32Array(frames * 12);
+  let mx = 1e-12;
+  for (let fI = 0; fI < frames; fI++) {
+    const o = fI * CH_HOP;
+    for (let i = 0; i < CH_WIN; i++) { re[i] = x[o + i] * win[i]; im[i] = 0; }
+    fft(re, im, false);
+    for (let k = 1; k < CH_WIN / 2; k++) if (pc[k] >= 0) raw[fI * 12 + pc[k]] += re[k] * re[k] + im[k] * im[k];
+    for (let c = 0; c < 12; c++) if (raw[fI * 12 + c] > mx) mx = raw[fI * 12 + c];
+  }
+  for (let fI = 0; fI < frames; fI++) {          // log, then each frame: mean 0, length 1
+    let m = 0; for (let c = 0; c < 12; c++) { const v = Math.log1p(1e4 * raw[fI * 12 + c] / mx); raw[fI * 12 + c] = v; m += v; }
+    m /= 12; let n = 0; for (let c = 0; c < 12; c++) { raw[fI * 12 + c] -= m; n += raw[fI * 12 + c] ** 2; }
+    n = Math.sqrt(n) || 1; for (let c = 0; c < 12; c++) raw[fI * 12 + c] /= n;
+  }
+  return { frames, v: raw };
+}
+function chromaMatch(cp, cf, range) {            // best offsets d (member = practice + d) by the notes
+  const nP = cp.frames, nF = cf.frames, P = cp.v, F = cf.v;
+  const minOv = Math.max(1, Math.min(8 * CH_FPS, Math.floor(Math.min(nP, nF) * 0.5)));
+  const sc = [];
+  for (let L = -nP + minOv; L <= nF - minOv; L++) {
+    const d = L / CH_FPS; if (range && (d < range.lo - 0.05 || d > range.hi + 0.05)) continue;
+    const a0 = Math.max(0, -L), a1 = Math.min(nP, nF - L); let sum = 0;
+    for (let t = a0, b = (a0 + L) * 12; t < a1; t++, b += 12) { const a = t * 12; for (let c = 0; c < 12; c++) sum += P[a + c] * F[b + c]; }
+    sc.push([sum / (a1 - a0), L]);
+  }
+  sc.sort((x, y) => y[0] - x[0]);
+  const picks = [];
+  for (const [score, L] of sc) { if (picks.every((p) => Math.abs(p.L - L) >= 1.5 * CH_FPS)) picks.push({ L, d: L / CH_FPS, score }); if (picks.length === 5) break; }
+  return { cands: picks, ratio: picks.length > 1 && picks[1].score > 0 ? picks[0].score / picks[1].score : 9 };
+}
+// The music match used everywhere: notes decide the place, beats the exact frame.
+function matchMusic(range) {
+  const o = align(S.env.p, S.env.f, range);
+  const c = S.chr.p && S.chr.f ? chromaMatch(S.chr.p, S.chr.f, range) : null;
+  if (!c || !c.cands.length) return o && Object.assign(o, { how: 'beats' });
+  const refine = (d) => {
+    const lo = Math.max(d - 0.4, range ? range.lo : -1e9), hi = Math.min(d + 0.4, range ? range.hi : 1e9);
+    return (lo <= hi && align(S.env.p, S.env.f, { lo, hi })) || { d, score: 0 };
+  };
+  const top = c.cands[0], agree = o && Math.abs(o.d - top.d) < 0.6, notesSure = c.ratio >= 1.08;
+  let r, how;
+  if (agree) { r = o; how = 'notes+beats'; }
+  else if (notesSure || !o) { r = refine(top.d); how = 'notes'; }
+  else { r = o; how = 'beats (notes unsure)'; }
+  const pick = agree || how === 'notes' ? top : null;
+  const others = c.cands.filter((x) => x !== pick).slice(0, 2).map((x) => refine(x.d).d);
+  return { d: r.d, score: r.score, cscore: pick ? pick.score : null, ratio: how === 'notes' ? c.ratio : Math.max(o.ratio, agree ? c.ratio : 0),
+    candidates: [r.d, ...others], how, notes: c.cands.slice(0, 3).map((x) => x.d.toFixed(1) + ':' + x.score.toFixed(2)).join(' ') };
+}
 // returns { d, ratio, candidates } with fancamTime = practiceTime + d
 function align(ep, ef, range) {    // range = {lo, hi}: only offsets d (seconds) inside it
   let n = 1; while (n < ep.length + ef.length) n <<= 1;
@@ -630,7 +690,7 @@ function renderMembers() {
 // ---------- 2. your video + framing ----------
 async function loadOwn(file) {
   stopPlayback();
-  S.aligned = false; S.env.p = null; S.audio.p = null; S.ownError = false; $('result').hidden = true; $('exportBtn').hidden = false;
+  S.aligned = false; S.env.p = null; S.chr.p = null; S.audio.p = null; S.ownError = false; $('result').hidden = true; $('exportBtn').hidden = false;
   if (S.url.p) URL.revokeObjectURL(S.url.p);
   S.file.p = file; S.url.p = URL.createObjectURL(file);
   vid.p.src = S.url.p;
@@ -643,7 +703,7 @@ async function loadOwn(file) {
   try {
     const { ab } = await decodeVideoAudio(file);
     S.audio.p = ab; meta.textContent = name + ' · ' + fmt(ab.duration);
-    S.env.p = onsetEnvelope(await toMono(ab));
+    const mono = await toMono(ab); S.env.p = onsetEnvelope(mono); S.chr.p = chromaSeq(mono);
   } catch (e) {
     console.error(e); S.ownError = true;
     meta.textContent = "Couldn't read the sound in this video. Try another one (MP4 works best).";
@@ -694,7 +754,7 @@ function setMirror(on, fromQuestion) {
 
 // ---------- 4. member ----------
 function resetMember() {
-  S.env.f = null; S.audio.f = null; S.dur.f = 0; S.aligned = false; S.cand = null; S.startAt = 0; S.startTouched = false;
+  S.env.f = null; S.chr.f = null; S.audio.f = null; S.dur.f = 0; S.aligned = false; S.cand = null; S.startAt = 0; S.startTouched = false;
   vid.f.removeAttribute('src'); vid.f.load();
   const sv = $('startVid'); sv.removeAttribute('src'); sv.load();
   $('nextCand').hidden = true; $('result').hidden = true; $('exportBtn').hidden = false;
@@ -736,10 +796,11 @@ async function chooseMember(m) {
       const blob = await fetchWithProgress(videoUrl(m.video), (p) => { if (token === S.loadToken) hint.textContent = `Loading ${m.name}'s video… ${Math.round(p * 100)}%`; });
       if (token === S.loadToken) hint.textContent = `Reading ${m.name}'s music…`;
       const { ab } = await decodeVideoAudio(blob);
-      c = S.memberCache[m.video] = { blob, url: URL.createObjectURL(blob), ab, env: onsetEnvelope(await toMono(ab)) };
+      const mono = await toMono(ab);
+      c = S.memberCache[m.video] = { blob, url: URL.createObjectURL(blob), ab, env: onsetEnvelope(mono), chr: chromaSeq(mono) };
     }
     if (token !== S.loadToken) return;
-    S.audio.f = c.ab; S.env.f = c.env; S.url.f = c.url;
+    S.audio.f = c.ab; S.env.f = c.env; S.chr.f = c.chr; S.url.f = c.url;
     vid.f.src = c.url; $('startVid').src = c.url;
     await waitMeta(vid.f);
     if (token !== S.loadToken) return;
@@ -785,9 +846,11 @@ function startAtMatch() {
 // if it is almost as strong as the best match anywhere. A weak match near your pick is just noise:
 // then we keep the best match (your start time can't override the music).
 function alignNear() {
-  const best = align(S.env.p, S.env.f);
-  const near = align(S.env.p, S.env.f, { lo: S.startAt - S.dur.p, hi: S.startAt + 3 });
-  return near && near.score >= 0.6 * best.score ? { r: near, moved: Math.abs(near.d - best.d) > 0.2 } : { r: best, moved: false };
+  const best = matchMusic();
+  const near = matchMusic({ lo: S.startAt - S.dur.p, hi: S.startAt + 3 });
+  if (!near) return { r: best };
+  const ok = near.cscore != null && best.cscore != null ? near.cscore >= 0.75 * best.cscore : near.score >= 0.6 * best.score;
+  return ok ? { r: near } : { r: best };
 }
 // You picked a start time: songs repeat (chorus!), so look for the best music match again, only
 // where your video would contain that time. Skipped if you already picked a match by hand and
@@ -817,7 +880,7 @@ function showStartHint() {
 // ---------- alignment ----------
 function runAlign() {
   status('busy', 'Matching the music…');
-  const r = S.startTouched ? alignNear().r : align(S.env.p, S.env.f);
+  const r = S.startTouched ? alignNear().r : matchMusic();
   S.lastAlign = r; S.cand = r.candidates; S.candIdx = 0;
   S.d = r.d; S.aligned = true; S.T = 0; S.manualMatch = false;
   const sure = r.ratio >= 1.05;
@@ -1524,7 +1587,7 @@ $('finalChoice').addEventListener('click', (e) => {
   scrollToStep(2);
 });
 
-window.__dance = S; S._t = { align, decodeVideoAudio, decode, onsetEnvelope, toMono, openTracks, videoDecoderConfig, weekFolder }; // for testing
+window.__dance = S; S._t = { align, decodeVideoAudio, decode, onsetEnvelope, toMono, openTracks, videoDecoderConfig, weekFolder, matchMusic, chromaMatch }; // for testing
 try { $('kidName').value = localStorage.getItem('fancam.name') || ''; $('teamCode').value = localStorage.getItem('fancam.code') || ''; } catch (e) {}
 applyTransforms(); refreshSteps(); loadAssignments();
 })();
@@ -1551,7 +1614,7 @@ if (/[?&]debug\b/.test(location.search)) (function () {
     const sm = document.getElementById('statusMain').textContent + ' | ' + document.getElementById('statusSub').textContent;
     if (sm !== lastStatus) { lastStatus = sm; log('STATUS', sm); }
     if (!info && S.file && S.file.p) { info = true; log('FILE', S.file.p.name, S.file.p.size, S.file.p.type, navigator.userAgent); }
-    if (S.aligned && al !== S.d) { al = S.d; log('MATCH d=' + S.d.toFixed(3), 'durP=' + (+S.dur.p).toFixed(2), 'durF=' + (+S.dur.f).toFixed(2), 'startAt=' + S.startAt, 'L=' + (+S.L).toFixed(2)); }
+    if (S.aligned && al !== S.d) { al = S.d; log('MATCH d=' + S.d.toFixed(3), 'durP=' + (+S.dur.p).toFixed(2), 'durF=' + (+S.dur.f).toFixed(2), 'startAt=' + S.startAt, 'L=' + (+S.L).toFixed(2), 'how=' + (S.lastAlign && S.lastAlign.how), 'notes=' + (S.lastAlign && S.lastAlign.notes)); }
     if (S.playing || S.lining || S.exporting) {
       const sp = Math.max(0, -S.d), err = (vs.p.currentTime - vs.f.currentTime) - (sp - (sp + S.d));
       log('TICK T=' + (S.T || 0).toFixed(2), 'p=' + st(vs.p), 'f=' + st(vs.f), 'err=' + err.toFixed(2), S.lining ? 'LINING' : '', S.exporting ? 'EXPORT' : '');
