@@ -11,7 +11,7 @@
 谁能看到什么：
 - **成员直拍**：知道链接的人能看（本来就是 YouTube 上的公开视频）。
 - **孩子交的视频**：只有你能看。存在你 Drive 的 `Fancam Submissions` 文件夹里，没有分享给任何人。
-- **队伍口令**：存在小程序的设置（Script properties）里，网页和仓库里都看不到。
+- **队伍口令**：只写在 C 部分的小程序里，网页上看不到。
 
 ---
 
@@ -48,8 +48,12 @@
 4. 粘贴代码：
    - 如果 Claude 已经把代码复制到你的剪贴板，直接按 **⌘V**。
    - 不然就打开 <https://raw.githubusercontent.com/jqlaura/novae-dance-hub/main/fancam-compare/apps-script/Code.gs>，**⌘A**、**⌘C**，回到编辑区 **⌘V**。
-5. 按 **⌘S** 保存（或点编辑区上方的软盘图标 💾）。**代码里不用改任何东西。**
-6. 设置口令（只做一次）：左边竖排图标里点齿轮 ⚙ **Project Settings（项目设置）** → 拉到最下面 **Script Properties（脚本属性）** → **Add script property（添加脚本属性）** → Property 填 `TEAM_CODE`，Value 填你的队伍口令 → **Save script properties（保存）**。口令别用孩子的名字或生日。
+5. 在最上面找到这一行（第 13 行左右）：
+   ```js
+   const TEAM_CODE = 'change-me';
+   ```
+   只把引号里的 `change-me` 换成你的队伍口令，比如 `'stars2026'`。引号要保留；口令别用孩子的名字或生日。
+6. 按 **⌘S** 保存（或点编辑区上方的软盘图标 💾）。
 
 ### C2. 运行一次 setup（授权 + 建收作业文件夹）
 
@@ -61,7 +65,7 @@
 6. 下一页列出权限（查看、编辑你 Drive 里的文件；连接外部服务）→ 拉到底点 **Allow（允许）**。
 7. 页面下方会打开 **Execution log（执行日志）**，出现一行 `Submissions folder: https://drive.google.com/...`。这就是收作业的文件夹，已经建在你的 Drive 里了。
 
-> 如果日志里还有一行 “Remember to add the TEAM_CODE script property”，说明 C1 第 6 步没设口令：回去设好，再运行一次 setup。
+> 如果日志里还有一行 “Remember to change TEAM_CODE”，说明 C1 第 5 步没改口令：回去改好，⌘S，再运行一次 setup。
 
 ### C3. 部署成网页应用
 
@@ -79,11 +83,7 @@
 
 ### 以后要改口令
 
-⚙ **Project Settings** → **Script Properties** → 改 `TEAM_CODE` 的值 → **Save script properties**。马上生效，不用重新部署。
-
-### 以后更新代码（Claude 改了 Code.gs 时）
-
-打开 <https://raw.githubusercontent.com/jqlaura/novae-dance-hub/main/fancam-compare/apps-script/Code.gs> → **⌘A**、**⌘C** → 在编辑器里 **⌘A**、**⌘V** → **⌘S** → **Deploy → Manage deployments** → 选中这个部署，点铅笔 ✏ → **Version** 选 **New version** → **Deploy**。网址不变，**不用改口令**（口令在 Script Properties 里，不在代码里）。
+在编辑器里改 `TEAM_CODE` → ⌘S → **Deploy → Manage deployments** → 选中这个部署，点铅笔 ✏ → **Version** 选 **New version** → **Deploy**。网址不变。
 
 > 只改代码、不重新部署的话，网页用的还是旧版本，这一步不能漏。
 
