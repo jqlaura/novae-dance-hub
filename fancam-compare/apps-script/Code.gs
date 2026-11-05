@@ -6,7 +6,7 @@
  * Web app (Execute as: Me · Who has access: Anyone).
  * Put the /exec URL in assignments.json → submitUrl.
  *
- * Videos land in your existing "Novae - NEON" folder, inside its HW1, HW2, … folders. Whoever that folder is shared with can see them:
+ * Videos land in Laura's "Novae - NEON Homework" folder, inside its HW1, HW2, … folders. Whoever that folder is shared with can see them:
  * only you can open it. The team code lives only here, never in the web page.
  */
 
@@ -14,7 +14,8 @@
 const TEAM_CODE = 'change-me';          // what the kids type before they can submit (not case-sensitive)
 // =========================
 
-const ROOT_FOLDER_NAME = 'Novae - NEON';   // Laura's existing folder that holds HW1, HW2, …
+const ROOT_FOLDER_NAME = 'Novae - NEON Homework';
+const ROOT_FOLDER_ID = '1do6ASs4IuxDwvDmtnB4Vqq85mUZFgHuE';   // that folder (holds HW1, HW2, …); found by ID, so renaming or moving it is fine
 const CHUNK = 8 * 1024 * 1024;          // must be a multiple of 256 KB (Drive's rule for resumable uploads)
 const MAX_SIZE = 1024 * 1024 * 1024;    // refuse anything over 1 GB
 
@@ -126,16 +127,8 @@ function list(req) {
 }
 
 // ---------- helpers ----------
-// The existing folder named ROOT_FOLDER_NAME (found once, then remembered by its ID, so renaming it later is fine).
-// HW_ROOT_ID is a new key on purpose: older versions remembered the "Fancam Submissions" folder under ROOT_FOLDER_ID.
 function rootFolder() {
-  const props = PropertiesService.getScriptProperties();
-  const id = props.getProperty('HW_ROOT_ID');
-  if (id) { try { const f = DriveApp.getFolderById(id); if (!f.isTrashed()) return f; } catch (e) {} }
-  const it = DriveApp.getFoldersByName(ROOT_FOLDER_NAME);
-  const folder = it.hasNext() ? it.next() : DriveApp.createFolder(ROOT_FOLDER_NAME);
-  props.setProperty('HW_ROOT_ID', folder.getId());
-  return folder;
+  return DriveApp.getFolderById(ROOT_FOLDER_ID);
 }
 // Find this week's folder even if it's written "HW 2" or "hw2 - Nov 1" (but never take HW20 for HW2).
 function findSub(parent, name) {
