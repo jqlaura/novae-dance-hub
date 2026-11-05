@@ -2,7 +2,7 @@
  * Novae Dance Hub — receives kids' comparison videos and saves them in Laura's Google Drive.
  *
  * Setup (step by step in SETUP-GOOGLE-DRIVE.md, part C): paste this file into a new project at
- * script.google.com, change TEAM_CODE below, run setup() once, then Deploy → New deployment →
+ * script.google.com, put the team code in Project Settings → Script properties (TEAM_CODE), run setup() once, then Deploy → New deployment →
  * Web app (Execute as: Me · Who has access: Anyone).
  * Put the /exec URL in assignments.json → submitUrl.
  *
@@ -10,9 +10,14 @@
  * only you can open it. The team code lives only here, never in the web page.
  */
 
-// ====== CHANGE THIS ======
-const TEAM_CODE = 'change-me';          // what the kids type before they can submit (not case-sensitive)
-// =========================
+// The team code (what the kids type before they can submit; not case-sensitive) lives in
+// Project Settings (gear icon) → Script properties → TEAM_CODE. That way you can paste a new version
+// of this file any time without editing it, and the code never appears in the public repository.
+const TEAM_CODE = 'change-me';          // only used if the script property is missing
+function teamCode() {
+  return PropertiesService.getScriptProperties().getProperty('TEAM_CODE') || TEAM_CODE;
+}
+function codeOk(given) { const c = teamCode(); return c !== 'change-me' && norm(given) === norm(c); }
 
 const ROOT_FOLDER_NAME = 'Fancam Submissions';
 const CHUNK = 8 * 1024 * 1024;          // must be a multiple of 256 KB (Drive's rule for resumable uploads)
@@ -22,7 +27,7 @@ const MAX_SIZE = 1024 * 1024 * 1024;    // refuse anything over 1 GB
 function setup() {
   const folder = rootFolder();
   Logger.log('Submissions folder: ' + folder.getUrl());
-  if (TEAM_CODE === 'change-me') Logger.log('Remember to change TEAM_CODE at the top of the file!');
+  if (teamCode() === 'change-me') Logger.log('Remember to add the TEAM_CODE script property (Project Settings → Script properties)!');
 }
 
 function doGet() {
@@ -45,7 +50,7 @@ function doPost(e) {
 
 /** 1. Check the team code and open a Drive upload for one video. */
 function start(req) {
-  if (norm(req.passcode) !== norm(TEAM_CODE) || TEAM_CODE === 'change-me') {
+  if (!codeOk(req.passcode)) {
     Utilities.sleep(1500);              // slow down guessing
     return { ok: false, code: 'passcode', error: 'wrong team code' };
   }
@@ -103,7 +108,7 @@ function chunk(req) {
 
 /** 3. Who has submitted this week: names, member, latest time, number of tries. No videos, no links. */
 function list(req) {
-  if (norm(req.passcode) !== norm(TEAM_CODE) || TEAM_CODE === 'change-me') {
+  if (!codeOk(req.passcode)) {
     Utilities.sleep(1500);
     return { ok: false, code: 'passcode', error: 'wrong team code' };
   }
