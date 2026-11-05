@@ -12,13 +12,13 @@ const path = require('path');
   await page.goto(`http://127.0.0.1:${port}/index.html`);
   await page.waitForFunction(() => window.__dance && window.__dance.assignments.length, null, { timeout: 20000 });
   await page.evaluate(() => { const s = document.getElementById('assignment'); s.value = 'demo'; s.dispatchEvent(new Event('change')); });
+  await page.click('#members button:has-text("Member B")');
   await page.click('#sampleOwn');
   await page.waitForFunction(() => window.__dance.env.p, null, { timeout: 60000 });
   await page.click('#mirrorChoice button[data-v="no"]');
   await page.click('#videoReady');
   const preview = await page.evaluate(() => ({ frame: document.getElementById('frameVid').style.transform, note: document.getElementById('mirrorNote').textContent, mirror: window.__dance.mirror }));
   console.log('after "No":', JSON.stringify(preview));
-  await page.click('#members button:has-text("Member B")');
   await page.waitForFunction(() => window.__dance.aligned, null, { timeout: 60000 });
   await page.waitForTimeout(1500);
   const before = await page.evaluate(() => ({

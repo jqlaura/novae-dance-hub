@@ -248,8 +248,15 @@ canvas#rec { display: none; }
     <p class="hint">They're flipped left–right, so they look like dancing in front of a mirror.</p>
   </section>
 
+  <section class="step locked" id="step4">
+    <h2><span class="n">1</span>Pick your member</h2>
+    <div class="members" id="members"></div>
+    <p class="hint" id="memberHint">Pick the member you were assigned.</p>
+    <p class="hint">Member videos are mirrored. We remember your member on this phone.</p>
+  </section>
+
   <section class="step locked" id="step2">
-    <h2><span class="n">1</span>Upload your practice video</h2>
+    <h2><span class="n">2</span>Upload your practice video</h2>
     <label class="filebtn">Choose video<input id="fileP" type="file" accept="video/*"></label>
     <span class="filemeta" id="metaP">No video yet</span>
     <button class="link" id="sampleOwn" type="button" hidden>Use a sample practice video</button>
@@ -273,12 +280,6 @@ canvas#rec { display: none; }
   </section>
 
 
-  <section class="step locked" id="step4">
-    <h2><span class="n">2</span>Pick your member</h2>
-    <div class="members" id="members"></div>
-    <p class="hint" id="memberHint">Pick the member you were assigned.</p>
-    <p class="hint">Member videos are mirrored too.</p>
-  </section>
 
   <section class="step locked" id="step5">
     <h2><span class="n">3</span>Check the match</h2>
@@ -716,9 +717,8 @@ function refreshSteps() {
   const has1 = !!S.assign, has2 = !!S.file.p && !S.ownError, has3 = S.mirrorAnswered && S.videoReady;
   const memberReady = !!S.member && S.dur.f > 0;
   setStep(1, has1 ? 'done' : 'open');
-  setStep(2, !has1 ? 'locked' : has2 ? 'done' : 'open');
-  setStep(3, !(has1 && has2) ? 'locked' : has3 ? 'done' : 'open');
-  setStep(4, !(has1 && has2 && has3) ? 'locked' : memberReady ? 'done' : 'open');
+  setStep(4, !has1 ? 'locked' : S.member ? 'done' : 'open');                       // 1. pick your member
+  setStep(2, !(has1 && S.member) ? 'locked' : has2 && has3 ? 'done' : 'open');      // 2. your video
   setStep(5, !(has1 && has2 && has3 && memberReady) ? 'locked' : S.matchConfirmed && S.aligned ? 'done' : 'open');
   setStep(6, !(has1 && has2 && has3 && memberReady && S.aligned && S.matchConfirmed) ? 'locked' : 'open');
   updateControls();
@@ -740,13 +740,18 @@ async function loadAssignments() {
   if (def) { sel.value = def; chooseAssignment(def, true); }
   setupWeek();
 }
+const memberKey = () => 'fancam.member.' + (S.assign ? S.assign.id : '');
+function rememberedMember() { try { return localStorage.getItem(memberKey()) || ''; } catch (e) { return ''; } }
 function chooseAssignment(id, quiet) {
   stopPlayback();
   S.assign = S.assignments.find((a) => a.id === id) || null;
   S.member = null; resetMember();
   $('sampleOwn').hidden = !(S.assign && S.assign.demo);
   renderMembers(); refreshSteps();
-  if (S.assign && !quiet) scrollToStep(!S.file.p ? 2 : 4);
+  // the same kid always dances the same member: pick last time's member again
+  const saved = S.assign && S.assign.members.find((m) => m.name === rememberedMember() && hasVideo(m));
+  if (saved) chooseMember(saved, true);
+  if (S.assign && !quiet) scrollToStep(S.member ? 2 : 4);
 }
 function renderMembers() {
   const box = $('members'); box.textContent = '';
@@ -898,19 +903,22 @@ async function fetchWithProgress(url, onp) {
   for (;;) { const { done, value } = await reader.read(); if (done) break; parts.push(value); got += value.length; onp(got / total); }
   return new Blob(parts, { type: res.headers.get('content-type') || 'video/mp4' });
 }
-async function chooseMember(m) {
+async function chooseMember(m, restored) {
   if (S.exporting || !hasVideo(m)) return;
+  try { localStorage.setItem(memberKey(), m.name); } catch (e) {}
+  const again = restored ? 'Same as last time. Tap another name to change. ' : '';
   stopPlayback(); resetMember();
   S.member = m; S.mirrorF = m.mirror !== false;
   renderMembers(); applyTransforms(); refreshSteps();
   $('labelF').textContent = m.name;
   const token = ++S.loadToken, hint = $('memberHint');
-  hint.textContent = 'Loading ' + m.name + "'s video…";
+  hint.textContent = again + 'Loading ' + m.name + "'s video…";
+  if (!restored && !S.videoReady) scrollToStep(2);                  // next: your video
   try {
     let c = S.memberCache[m.video];
     if (!c) {
-      const blob = await fetchWithProgress(videoUrl(m.video), (p) => { if (token === S.loadToken) hint.textContent = `Loading ${m.name}'s video… ${Math.round(p * 100)}%`; });
-      if (token === S.loadToken) hint.textContent = `Reading ${m.name}'s music…`;
+      const blob = await fetchWithProgress(videoUrl(m.video), (p) => { if (token === S.loadToken) hint.textContent = `${again}Loading ${m.name}'s video… ${Math.round(p * 100)}%`; });
+      if (token === S.loadToken) hint.textContent = `${again}Reading ${m.name}'s music…`;
       const { ab } = await decodeVideoAudio(blob);
       const mono = await toMono(ab);
       c = S.memberCache[m.video] = { blob, url: URL.createObjectURL(blob), ab, env: onsetEnvelope(mono), chr: chromaSeq(mono) };
@@ -921,10 +929,10 @@ async function chooseMember(m) {
     await waitMeta(vid.f);
     if (token !== S.loadToken) return;
     S.dur.f = Math.min(c.ab.duration, vid.f.duration || Infinity);
-    hint.textContent = `${m.name}'s video is ready (${fmt(S.dur.f)}).`;
+    hint.textContent = `${again}${m.name}'s video is ready (${fmt(S.dur.f)}).`;
     setupStart(); refreshSteps();
     if (S.env.p) runAlign();
-    scrollToStep(5);
+    if (S.videoReady) scrollToStep(5);                                // only jump ahead once your video is ready too
   } catch (e) {
     console.error(e);
     if (token === S.loadToken) hint.textContent = `Couldn't load ${m.name}'s video. Check your connection and tap the name again.`;
@@ -1770,7 +1778,7 @@ $('sampleOwn').addEventListener('click', async () => {
 });
 $('videoReady').addEventListener('click', () => {
   if ($('videoReady').disabled) return;
-  setVideoReady(true); refreshSteps(); scrollToStep(4);
+  setVideoReady(true); refreshSteps(); scrollToStep(S.member && S.dur.f > 0 ? 5 : 4);
 });
 $('mirrorChoice').addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
