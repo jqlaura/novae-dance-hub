@@ -18,6 +18,7 @@
 - **先选成员，并记住（用户 2026-11-05）**：步骤顺序改成 **1 Pick your member → 2 Upload your practice video（镜像问题 + My video is ready!）→ 3 Check the match → 4 Generate**（DOM 里 id 没改：step4 = 成员，step2 = 上传）。选的成员存在手机里（`localStorage` 的 `fancam.member.<作业id>`），下次打开自动选上，提示 “Same as last time. Tap another name to change.”。**成员视频（约 50 MB）等孩子选了自己的视频以后才下载**（用户 2026-11-05：只是打开看看不要耗流量）；已经下载过（同一次打开里）就直接用。只记在这台手机/浏览器上，换手机要重新选。
 - Artifact 片段用 `python3 fancam-compare/tools/build_artifact.py index.html OUT` 生成（取 `artifact:*` 标记之间的内容）。
 - 决定：全部在手机浏览器里处理，视频不上传、不存 GitHub（未成年人隐私；GitHub 单文件 100 MB 限制）。
+- **发给孩子的短链接（用户 2026-11-05 建，在用户自己的 TinyURL 账号里）**：**tinyurl.com/novae-hub** → https://jqlaura.github.io/novae-dance-hub/fancam-compare/ 。网址变了只要在 TinyURL 里改目标。
 - **正式网址（GitHub Pages，2026-11-04 上线）**：https://jqlaura.github.io/novae-dance-hub/ （根目录 `index.html` 跳到 `fancam-compare/`）。push 到 main 一两分钟后自动更新。 仓库 2026-11-04 从 novae-dance-project 改名为 **jqlaura/novae-dance-hub**（项目名 Novae Dance Hub）；本地文件夹名没改。
 - 旧的 Claude Artifact 预览（https://claude.ai/artifact/VteLrSBvY2cCiXXc5VPPHC）不再更新。
 - 用户 iPhone 实测（2026-11-04）：① “声音读不出来” → 改成自己拆 MOV/MP4 的 AAC 音轨；② 预览卡顿、没声音 → 预览改用主视频自带声音（静音键不影响），另一个视频只微调速度跟随。改完待用户再测。

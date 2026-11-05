@@ -6,6 +6,7 @@
 
 孩子在手机上打开网页（英文界面，Novae logo 配色 + 夜空流星头图），按 6 步做出“自己的练习视频 + 分配成员的直拍”左右对比视频，音乐自动对齐。
 
+- 发给孩子的链接：**tinyurl.com/novae-hub**（跳到 GitHub Pages 上的网页）
 - 网址：https://jqlaura.github.io/novae-dance-hub/
 - 页面：[fancam-compare/index.html](fancam-compare/index.html)；作业和成员视频列表：[fancam-compare/assignments.json](fancam-compare/assignments.json)
 - 处理都在手机浏览器里完成；视频只有在“Submit”时才会上传：分块（每块 8 MB）传给 Google Apps Script（[`apps-script/Code.gs`](fancam-compare/apps-script/Code.gs)），它检查队伍口令，再存进教练 Drive 里的私人文件夹 `Fancam Submissions/<作业名>/`。
