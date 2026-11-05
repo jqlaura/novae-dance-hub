@@ -369,6 +369,7 @@ canvas#rec { display: none; }
         <input id="teamCode" type="text" placeholder="Team code (ask Laura)" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Team code">
         <button class="btn" id="submitBtn" type="button">Submit</button>
         <div class="progress" id="upProg" hidden><i id="upBar"></i></div>
+        <button class="link" id="cancelUp" type="button" hidden>Cancel upload</button>
         <p class="note" id="submitNote" aria-live="polite"></p>
         </div>
       </div>
@@ -790,6 +791,7 @@ function applyTransforms() {
   vid.p.style.transform = t;
   vid.f.style.transform = S.mirrorF ? 'scaleX(-1)' : '';
   $('startThumb').classList.toggle('mirror', S.mirrorF); $('startThumb2').classList.toggle('mirror', S.mirrorF);
+  for (const id of ['stillP', 'stillP2']) $(id).style.transform = S.mirror ? 'scaleX(-1)' : '';   // Check the match = final look
 }
 const clampPan = (v) => Math.max(-0.5 * S.crop.z, Math.min(0.5 * S.crop.z, v));
 (function framing() {               // one finger moves, two fingers zoom (trackpad pinch on a computer)
@@ -953,7 +955,7 @@ function updateMatchView() {
     $('stillPt' + n).textContent = fmt(pt.p); $('stillFt' + n).textContent = fmt(pt.f);
     $('stillFname' + n).textContent = name;
     const sp = $('stillP' + n); if (S.url.p && sp.getAttribute('src') !== S.url.p) { sp.src = S.url.p; sp._primed = false; }
-    sp.style.transform = '';
+    sp.style.transform = S.mirror ? 'scaleX(-1)' : '';    // same as the final video
     const sf = $('startVid' + n); if (S.url.f && sf.getAttribute('src') !== S.url.f) { sf.src = S.url.f; sf._primed = false; }
     showStill(sp, pt.p + 0.05); showStill(sf, pt.f + 0.05);
   });
@@ -1560,10 +1562,28 @@ async function save() {
 // The page talks to a Google Apps Script web app (see apps-script/Code.gs). The video goes up in
 // 8 MB pieces; the script checks the team code and puts the pieces together in the coach's Drive.
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-async function callScript(body) {
-  const r = await fetch(S.cfg.submitUrl, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  return r.json();
+// Every call has a time limit, so a stalled phone connection can't leave the page waiting forever.
+// `cancel` is an AbortController the Cancel button aborts.
+async function callScript(body, { timeout = 60000, cancel = null } = {}) {
+  const ac = new AbortController(), timer = setTimeout(() => ac.abort('timeout'), timeout);
+  const stop = () => ac.abort('canceled'); if (cancel) cancel.signal.addEventListener('abort', stop);
+  try {
+    const r = await fetch(S.cfg.submitUrl, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'text/plain;charset=utf-8' }, signal: ac.signal });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const text = await r.text();
+    try { return JSON.parse(text); } catch (e) { throw new Error("Laura's upload page answered something unexpected"); }
+  } catch (e) {
+    if (cancel && cancel.signal.aborted) { const c = new Error('canceled'); c.code = 'canceled'; throw c; }
+    if (ac.signal.aborted) { const t = new Error('no answer for ' + Math.round(timeout / 1000) + ' seconds'); t.code = 'timeout'; throw t; }
+    throw e;
+  } finally { clearTimeout(timer); if (cancel) cancel.signal.removeEventListener('abort', stop); }
+}
+// try a call a few times; never retry a wrong team code or a cancel
+async function callScriptRetry(body, opts, tries, onRetry) {
+  for (let n = 1; ; n++) {
+    try { const r = await callScript(body, opts); if (r.ok || r.code === 'passcode') return r; throw new Error(r.error || 'upload failed'); }
+    catch (e) { if (e.code === 'canceled' || n >= tries) throw e; if (onRetry) onRetry(n, e); await wait(1500 * n); }
+  }
 }
 const toBase64 = (blob) => new Promise((res, rej) => {
   const fr = new FileReader();
@@ -1641,6 +1661,7 @@ $('whoGo').addEventListener('click', () => { const c = $('whoCode').value.trim()
 $('whoCode').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('whoGo').click(); });
 $('doneWho').addEventListener('click', () => openWho(true));
 
+let upCancel = null;
 async function submit() {
   const note = $('submitNote'), name = $('kidName').value.trim(), code = $('teamCode').value.trim();
   if (!S.outBlob || S.submitting || S.submitted) return;
@@ -1650,32 +1671,47 @@ async function submit() {
   try { localStorage.setItem('fancam.name', name); localStorage.setItem('fancam.code', code); } catch (e) {}
   const blob = S.outBlob, total = blob.size, bar = $('upBar');
   S.submitting = true; updateControls();
-  $('upProg').hidden = false; bar.style.width = '0%'; note.textContent = 'Starting the upload…';
+  upCancel = new AbortController();
+  $('upProg').hidden = false; $('cancelUp').hidden = false; bar.style.width = '0%';
+  // show how long we've been waiting, so a slow step never looks frozen
+  let label = 'Connecting to Laura\'s Drive…', since = Date.now();
+  const say = (t) => { label = t; since = Date.now(); note.textContent = t; };
+  const ticker = setInterval(() => { const sec = Math.round((Date.now() - since) / 1000); if (sec >= 5) note.textContent = `${label} ${sec}s`; }, 1000);
+  say(label);
   try {
-    const st = await callScript({ action: 'start', passcode: code, name, assignment: weekFolder(),
-      member: S.member && S.member.name, size: total, mime: blob.type || 'video/' + S.outExt });
+    const st = await callScriptRetry({ action: 'start', passcode: code, name, assignment: weekFolder(),
+      member: S.member && S.member.name, size: total, mime: blob.type || 'video/' + S.outExt },
+      { timeout: (S._timeouts || {}).start || 45000, cancel: upCancel }, 3, (n) => say(`Still connecting… trying again (${n + 1}/3)`));
     if (!st.ok) { const e = new Error(st.error || 'upload refused'); e.code = st.code; throw e; }
-    const step = st.chunk || 8 * 1048576;
+    // Start with a small piece and size the next ones to the real upload speed (about 15 s each),
+    // so a slow phone connection still moves and a fast one isn't slowed down. Drive needs multiples of 256 KB.
+    const Q = 256 * 1024, MIN = 4 * Q, MAX = Math.max(MIN, Math.min(st.chunk || 8 * 1048576, 8 * 1048576));
+    let step = MIN;
     for (let off = 0; off < total;) {
-      const data = await toBase64(blob.slice(off, Math.min(off + step, total)));
-      let r = null;
-      for (let tries = 1; ; tries++) {
-        try { r = await callScript({ action: 'chunk', id: st.id, offset: off, data }); if (r.ok) break; throw new Error(r.error || 'upload failed'); }
-        catch (e) { if (tries >= 3) throw e; await wait(2000 * tries); }
-      }
-      off = r.done ? total : (typeof r.next === 'number' ? r.next : off + step);
+      const pct = Math.round(100 * off / total);
+      say(`Uploading… ${pct}% (keep this page open)`);
+      const len = Math.min(step, total - off), t0 = Date.now();
+      const data = await toBase64(blob.slice(off, off + len));
+      const r = await callScriptRetry({ action: 'chunk', id: st.id, offset: off, data }, { timeout: (S._timeouts || {}).chunk || 120000, cancel: upCancel }, 3,
+        (n) => { step = MIN; say(`Uploading… ${pct}% · slow connection, trying again (${n + 1}/3)`); });
+      const sent = (r.done ? total : (typeof r.next === 'number' ? r.next : off + len)) - off;
+      const bps = sent / Math.max(0.5, (Date.now() - t0) / 1000);
+      step = Math.max(MIN, Math.min(MAX, Math.floor(bps * 15 / Q) * Q));
+      off += sent;
       bar.style.width = (100 * off / total).toFixed(1) + '%';
-      note.textContent = r.done ? '' : `Uploading… ${Math.round(100 * off / total)}% (keep this page open)`;
     }
+    clearInterval(ticker);
     S.submitted = true; $('submitBtn').textContent = 'Submitted ✓';
     note.textContent = 'Submitted! Laura has your video. Great work this week!';
     setTimeout(() => finish('yes'), 1200);
   } catch (e) {
-    console.error(e); $('upProg').hidden = true;
-    note.textContent = e.code === 'passcode' ? "That team code isn't right. Check it with Laura."
-      : "The upload didn't finish (" + (e.message || e) + "). Check your internet and tap Submit again.";
-  } finally { S.submitting = false; updateControls(); }
+    console.error(e); clearInterval(ticker); $('upProg').hidden = true;
+    note.textContent = e.code === 'passcode' ? "That team code isn't right. Check it with Laura, then tap Submit again."
+      : e.code === 'canceled' ? 'Upload canceled. Tap Submit to try again, or Download video and send it to Laura.'
+      : "The upload didn't finish (" + (e.message || e) + "). Check your internet and tap Submit again. If it keeps failing, tap Download video and send it to Laura.";
+  } finally { clearInterval(ticker); upCancel = null; $('cancelUp').hidden = true; S.submitting = false; updateControls(); }
 }
+$('cancelUp').addEventListener('click', () => { if (upCancel) upCancel.abort(); });
 
 // ---------- controls ----------
 function updateControls() {
