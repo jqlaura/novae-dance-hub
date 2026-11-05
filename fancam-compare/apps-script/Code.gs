@@ -107,9 +107,10 @@ function list(req) {
     Utilities.sleep(1500);
     return { ok: false, code: 'passcode', error: 'wrong team code' };
   }
-  const it = rootFolder().getFoldersByName(clean(req.assignment) || 'Other');
-  if (!it.hasNext()) return { ok: true, items: [] };
-  const files = it.next().getFiles(), people = {};
+  const root = rootFolder(), week = clean(req.assignment) || 'Other', it = root.getFoldersByName(week);
+  // a link to this week's folder for Laura (the folder is private, so the kids can't open it)
+  if (!it.hasNext()) return { ok: true, items: [], folderUrl: root.getUrl(), folderName: ROOT_FOLDER_NAME };
+  const folder = it.next(), files = folder.getFiles(), people = {};
   while (files.hasNext()) {
     const f = files.next(), parts = f.getName().replace(/\.(mp4|webm|mov)$/i, '').split(' · ');
     const name = (parts[0] || 'No name').trim(), key = name.toLowerCase(), when = f.getDateCreated();
@@ -119,7 +120,7 @@ function list(req) {
   }
   const items = Object.keys(people).map(function (k) { const p = people[k]; return { name: p.name, member: p.member, latest: new Date(p.latest).toISOString(), tries: p.tries }; });
   items.sort(function (a, b) { return a.latest < b.latest ? 1 : -1; });
-  return { ok: true, items: items };
+  return { ok: true, items: items, folderUrl: folder.getUrl(), folderName: week };
 }
 
 // ---------- helpers ----------

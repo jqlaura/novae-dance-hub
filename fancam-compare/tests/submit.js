@@ -29,6 +29,7 @@ const { chromium } = require('playwright');
   await page.click('#sampleOwn');
   await page.waitForFunction(() => window.__dance.env.p, null, { timeout: 60000 });
   await page.click('#mirrorChoice button[data-v="no"]');
+  await page.click('#videoReady');
   await page.click('#members button:has-text("Member B")');
   await page.waitForFunction(() => window.__dance.aligned, null, { timeout: 60000 });
   await page.waitForTimeout(800);

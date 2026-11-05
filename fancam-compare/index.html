@@ -182,6 +182,8 @@ details.adjust summary { cursor: pointer; padding: 13px 0; font-weight: 600; }
 
 .btn { border: 0; border-radius: 999px; padding: 17px 20px; font: inherit; font-weight: 700; font-size: 17px; cursor: pointer; background: var(--brand); color: #1c1a26; }
 .btn.dark { background: var(--ink); color: var(--bg); }
+.btn.sm { padding: 11px 18px; font-size: 15px; align-self: center; }
+.btn.sm:disabled { opacity: 0.4; cursor: default; }
 .btn:disabled { opacity: 0.4; cursor: default; }
 .progress { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
 .progress i { display: block; height: 100%; width: 0%; background: var(--brand); }
@@ -235,6 +237,7 @@ canvas#rec { display: none; }
       </div>
       <p class="small" id="whoNote"></p>
       <ol class="wholist" id="whoList"></ol>
+      <p class="small" id="whoFolder" hidden><a id="whoFolderLink" href="#" target="_blank" rel="noopener">Open the HW folder in Drive</a> · only Laura can open it</p>
     </div>
   </section>
 
@@ -264,6 +267,8 @@ canvas#rec { display: none; }
         <div class="guide v"></div><div class="guide h"></div><div class="guide tag">CENTER</div>
       </div>
       <p class="small">Drag to put yourself on the center line. Pinch with two fingers to zoom. <button class="link" id="resetCrop" type="button">Reset</button></p>
+      <button class="btn sm" id="videoReady" type="button" disabled>My video is ready!</button>
+      <p class="small" id="readyNote">Answer the mirror question first.</p>
     </div>
   </section>
 
@@ -401,7 +406,7 @@ const S = {
   audio: { p: null, f: null }, env: { p: null, f: null }, chr: { p: null, f: null }, ownError: false,
   d: 0,             // member time = practice time + d
   aligned: false, cand: null, candIdx: 0, lastAlign: null,
-  crop: { z: 1, x: 0, y: 0 }, mirror: false, mirrorAnswered: false, mirrorF: true,
+  crop: { z: 1, x: 0, y: 0 }, mirror: false, mirrorAnswered: false, videoReady: false, mirrorF: true,
   startAt: 0, layout: 'lr', swap: false, audioFrom: 'f',
   playing: false, T: 0, L: 0, t0: 0, src: null, exporting: false,
   outBlob: null, outExt: 'mp4', cfg: {}, submitting: false, submitted: false,
@@ -708,7 +713,7 @@ function setStep(n, state) {
   el.classList.toggle('locked', state === 'locked'); el.classList.toggle('done', state === 'done');
 }
 function refreshSteps() {
-  const has1 = !!S.assign, has2 = !!S.file.p && !S.ownError, has3 = S.mirrorAnswered;
+  const has1 = !!S.assign, has2 = !!S.file.p && !S.ownError, has3 = S.mirrorAnswered && S.videoReady;
   const memberReady = !!S.member && S.dur.f > 0;
   setStep(1, has1 ? 'done' : 'open');
   setStep(2, !has1 ? 'locked' : has2 ? 'done' : 'open');
@@ -842,7 +847,22 @@ function setMirror(on, fromQuestion) {
   if (fromQuestion) pressSeg('mirrorChoice', (b) => b.dataset.v === (on ? 'no' : 'yes'));
   updateMatchView();
 }
+function setVideoReady(on) {
+  S.videoReady = on;
+  const b = $('videoReady');
+  b.textContent = on ? '✓ My video is ready' : 'My video is ready!';
+  updateReadyBtn();
+}
+// the button works once the sound is read and the mirror question is answered
+function updateReadyBtn() {
+  const b = $('videoReady'), note = $('readyNote');
+  const canGo = !!S.env.p && !S.ownError && S.mirrorAnswered;
+  b.disabled = !canGo || S.videoReady || S.exporting;
+  note.hidden = canGo || S.ownError;
+  note.textContent = !S.env.p ? 'Getting your video ready…' : 'Answer the mirror question first.';
+}
 function resetMirrorQuestion() {
+  setVideoReady(false);
   S.mirrorAnswered = false; S.mirror = false; applyTransforms(); pressSeg('mirrorChoice', () => false);
   $('mirrorNote').textContent = 'Mirrored = looks like dancing in front of a mirror.';
 }
@@ -1610,6 +1630,10 @@ function weekDue(now = new Date()) {
   return sat.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 function savedCode() { try { return localStorage.getItem('fancam.code') || ''; } catch (e) { return ''; } }
+function forgetCode(code) {
+  try { if (localStorage.getItem('fancam.code') === code) localStorage.removeItem('fancam.code'); } catch (e) {}
+  if ($('teamCode').value.trim() === code) $('teamCode').value = '';
+}
 function setupWeek() {
   if (!S.cfg.submitUrl || !(S.cfg.weeks && S.cfg.weeks.firstSunday)) return;
   $('weekCard').hidden = false; $('weekName').textContent = weekFolder();
@@ -1620,13 +1644,16 @@ function whenText(iso) {
   const d = new Date(iso); if (isNaN(d)) return '';
   return d.toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
 }
-async function loadWho(code, quiet) {
+// quiet: background refresh, no messages. auto: a code we filled in ourselves (saved earlier);
+// if it's wrong, forget it and just ask for the code instead of saying "wrong".
+async function loadWho(code, quiet, auto) {
   const note = $('whoNote'), list = $('whoList');
   if (!quiet) { note.textContent = 'Loading…'; }
   let r;
   try { r = await callScript({ action: 'list', passcode: code, assignment: weekFolder() }); }
   catch (e) { if (!quiet) note.textContent = "Couldn't load the list. Check your internet and try again."; return false; }
   if (!r.ok) {
+    if (r.code === 'passcode' && (quiet || auto)) { forgetCode(code); if (!quiet) note.textContent = 'Type the team code to see who has submitted this week.'; return false; }
     if (quiet) return false;
     $('whoCodeRow').hidden = false;
     note.textContent = r.code === 'passcode' ? "That team code isn't right. Check it with Laura."
@@ -1646,6 +1673,9 @@ async function loadWho(code, quiet) {
     li.append(a, b); list.append(li);
   }
   note.textContent = items.length ? '' : 'Nobody has submitted yet this week. Be the first!';
+  const fl = $('whoFolder');
+  if (r.folderUrl) { const a = $('whoFolderLink'); a.href = r.folderUrl; a.textContent = `Open the ${r.folderName || weekFolder()} folder in Drive`; fl.hidden = false; }
+  else fl.hidden = true;
   return true;
 }
 async function openWho(scroll) {
@@ -1653,7 +1683,7 @@ async function openWho(scroll) {
   box.hidden = false; $('whoBtn').textContent = 'Hide';
   if (scroll) $('weekCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
   const code = $('teamCode').value.trim() || savedCode();
-  if (code && await loadWho(code)) return;
+  if (code && await loadWho(code, false, true)) return;
   $('whoCodeRow').hidden = false;
   if (!code) $('whoNote').textContent = 'Type the team code to see who has submitted this week.';
 }
@@ -1672,7 +1702,7 @@ async function submit() {
   if (!name) { note.textContent = 'Type your name first.'; $('kidName').focus(); return; }
   if (!S.cfg.submitUrl) { note.textContent = "Submitting isn't set up yet. Tap Download video and send it to Laura."; return; }
   if (!code) { note.textContent = 'Type the team code first.'; $('teamCode').focus(); return; }
-  try { localStorage.setItem('fancam.name', name); localStorage.setItem('fancam.code', code); } catch (e) {}
+  try { localStorage.setItem('fancam.name', name); } catch (e) {}
   const blob = S.outBlob, total = blob.size, bar = $('upBar');
   S.submitting = true; updateControls();
   upCancel = new AbortController();
@@ -1687,6 +1717,7 @@ async function submit() {
       member: S.member && S.member.name, size: total, mime: blob.type || 'video/' + S.outExt },
       { timeout: (S._timeouts || {}).start || 45000, cancel: upCancel }, 3, (n) => say(`Still connecting… trying again (${n + 1}/3)`));
     if (!st.ok) { const e = new Error(st.error || 'upload refused'); e.code = st.code; throw e; }
+    try { localStorage.setItem('fancam.code', code); } catch (e) {}     // the code worked: remember it
     // Start with a small piece and size the next ones to the real upload speed (about 15 s each),
     // so a slow phone connection still moves and a fast one isn't slowed down. Drive needs multiples of 256 KB.
     const Q = 256 * 1024, MIN = 4 * Q, MAX = Math.max(MIN, Math.min(st.chunk || 8 * 1048576, 8 * 1048576));
@@ -1721,7 +1752,8 @@ $('cancelUp').addEventListener('click', () => { if (upCancel) upCancel.abort(); 
 function updateControls() {
   $('exportBtn').hidden = !$('result').hidden;
   $('submitBtn').disabled = S.submitting || S.submitted;
-  const ready = S.aligned && S.matchConfirmed && !S.exporting && !!S.member && S.mirrorAnswered && !S.ownError;
+  const ready = S.aligned && S.matchConfirmed && !S.exporting && !!S.member && S.mirrorAnswered && S.videoReady && !S.ownError;
+  updateReadyBtn();
   $('playBtn').disabled = !ready; $('scrub').disabled = !ready; $('exportBtn').disabled = !ready;
   for (const b of document.querySelectorAll('.adjust button, #mirrorChoice button, #startNudge button')) b.disabled = S.exporting;
   const btns = $('members').querySelectorAll('button');
@@ -1735,6 +1767,10 @@ $('sampleOwn').addEventListener('click', async () => {
   $('metaP').textContent = 'Loading the sample…';
   try { const b = await (await fetch('samples/practice.mp4')).blob(); await loadOwn(new File([b], 'sample-practice.mp4', { type: 'video/mp4' })); }
   catch (e) { $('metaP').textContent = "Couldn't load the sample."; }
+});
+$('videoReady').addEventListener('click', () => {
+  if ($('videoReady').disabled) return;
+  setVideoReady(true); refreshSteps(); scrollToStep(4);
 });
 $('mirrorChoice').addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
