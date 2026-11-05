@@ -11,6 +11,7 @@
 - 外观（用户 2026-11-04 定稿 S2）：Novae logo 配色（粉 #f08cc8 → 淡紫 #b49cf2 → 天蓝 #7cc4ff，颜色是从小图估的，有原图再校准），只用手机自带字体，顶部是深色“夜空”卡片 + 渐变流星（SVG）。顶部小字 “EDS Junior · NOVAE”。用户不要：太多颜色和字体、贴纸/可爱风、放射线。步骤标题用直接的指令，不用问句。不要绑定某一首歌（NEON 只是其中一个作业）。
 - 第 5 版（用户 2026-11-04）：① 孩子选“没镜像”后，**上传预览不翻转**；**Check the match 里孩子的画面要翻转**（和最终视频一样，用户 2026-11-05 改）；② Check the match 显示**两组**画面，取孩子视频的 1/3 和 2/3 处，各配成员视频里对应的时刻；③ **Looks right** 会确认匹配：这一步打勾、显示 “✓ Match confirmed · Change”，确认后才能 Generate（重新对齐、改时间、换成员或视频都要重新确认）。
 - **提交上传（用户 2026-11-05 iPhone 实测：卡在 “Starting the upload…” 5 分钟，最后 “Load failed”，没法取消）**：Apps Script 本身正常（错口令 3.4 秒就回）。原因是第一块 8 MB（base64 后约 11 MB）在手机上传太久，旧版一块传完才更新文字，也没有超时。现在：每次请求有时限（start 45 秒、chunk 120 秒，`S._timeouts` 可在测试里改短），超时/网络错自动重试 3 次（错口令、取消不重试）；分块先 1 MB，再按实测网速调到约 15 秒一块（1–8 MB，256 KB 的倍数）；显示等待秒数；有 **Cancel upload**；失败提示里建议 Download 后发给 Laura。测试：`node tests/submit.js <端口> [upload|cancel]`（用 Playwright 拦截假装 Apps Script）。**还没在 iPhone 上确认。**
+- **步骤显示（用户 2026-11-05）**：没轮到的步骤**完全隐藏**（`.step.locked { display: none }`），前一步完成后再淡入出现；不要变灰显示。提交后前面的步骤用 `faded` 变淡，那个保留。
 - Artifact 片段用 `python3 fancam-compare/tools/build_artifact.py index.html OUT` 生成（取 `artifact:*` 标记之间的内容）。
 - 决定：全部在手机浏览器里处理，视频不上传、不存 GitHub（未成年人隐私；GitHub 单文件 100 MB 限制）。
 - **正式网址（GitHub Pages，2026-11-04 上线）**：https://jqlaura.github.io/novae-dance-hub/ （根目录 `index.html` 跳到 `fancam-compare/`）。push 到 main 一两分钟后自动更新。 仓库 2026-11-04 从 novae-dance-project 改名为 **jqlaura/novae-dance-hub**（项目名 Novae Dance Hub）；本地文件夹名没改。

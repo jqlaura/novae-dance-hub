@@ -56,7 +56,11 @@ h1 { position: relative; font-weight: 800; font-size: 42px; line-height: 1.02; m
 /* step cards */
 .step { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; transition: opacity 0.2s; }
 .step:not(.locked):not(.done) { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-.step.locked { opacity: 0.4; pointer-events: none; }
+/* a step stays hidden until the one before it is done, then fades in */
+.step.locked { display: none; }
+.step:not(.locked) { animation: stepIn 0.25s ease-out; }
+@keyframes stepIn { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .step:not(.locked) { animation: none; } }
 .step h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.25; margin: 0; display: flex; gap: 10px; align-items: center; }
 .step .n { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-size: 14px; font-weight: 700; }
 .step:not(.locked):not(.done) .n { background: var(--accent); color: var(--accent-ink); }
