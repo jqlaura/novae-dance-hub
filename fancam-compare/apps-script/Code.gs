@@ -6,7 +6,7 @@
  * Web app (Execute as: Me · Who has access: Anyone).
  * Put the /exec URL in assignments.json → submitUrl.
  *
- * Videos land in "Fancam Submissions/<assignment>/" in your My Drive. That folder is private:
+ * Videos land in your existing "Novae - NEON" folder, inside its HW1, HW2, … folders. Whoever that folder is shared with can see them:
  * only you can open it. The team code lives only here, never in the web page.
  */
 
@@ -14,7 +14,7 @@
 const TEAM_CODE = 'change-me';          // what the kids type before they can submit (not case-sensitive)
 // =========================
 
-const ROOT_FOLDER_NAME = 'Fancam Submissions';
+const ROOT_FOLDER_NAME = 'Novae - NEON';   // Laura's existing folder that holds HW1, HW2, …
 const CHUNK = 8 * 1024 * 1024;          // must be a multiple of 256 KB (Drive's rule for resumable uploads)
 const MAX_SIZE = 1024 * 1024 * 1024;    // refuse anything over 1 GB
 
@@ -107,12 +107,14 @@ function list(req) {
     Utilities.sleep(1500);
     return { ok: false, code: 'passcode', error: 'wrong team code' };
   }
-  const root = rootFolder(), week = clean(req.assignment) || 'Other', it = root.getFoldersByName(week);
-  // a link to this week's folder for Laura (the folder is private, so the kids can't open it)
-  if (!it.hasNext()) return { ok: true, items: [], folderUrl: root.getUrl(), folderName: ROOT_FOLDER_NAME };
-  const folder = it.next(), files = folder.getFiles(), people = {};
+  const root = rootFolder(), week = clean(req.assignment) || 'Other', folder = findSub(root, week);
+  // a link to this week's folder for Laura (or the main folder if this week's isn't there yet)
+  if (!folder) return { ok: true, items: [], folderUrl: root.getUrl(), folderName: root.getName() };
+  const files = folder.getFiles(), people = {};
   while (files.hasNext()) {
-    const f = files.next(), parts = f.getName().replace(/\.(mp4|webm|mov)$/i, '').split(' · ');
+    const f = files.next(), fname = f.getName();
+    if (!/\.(mp4|webm)$/i.test(fname) || fname.split(' · ').length < 3) continue;   // only videos sent from the page ("name · member · time")
+    const parts = fname.replace(/\.(mp4|webm|mov)$/i, '').split(' · ');
     const name = (parts[0] || 'No name').trim(), key = name.toLowerCase(), when = f.getDateCreated();
     const p = people[key] || (people[key] = { name: name, member: '', latest: 0, tries: 0 });
     p.tries++;
@@ -120,21 +122,33 @@ function list(req) {
   }
   const items = Object.keys(people).map(function (k) { const p = people[k]; return { name: p.name, member: p.member, latest: new Date(p.latest).toISOString(), tries: p.tries }; });
   items.sort(function (a, b) { return a.latest < b.latest ? 1 : -1; });
-  return { ok: true, items: items, folderUrl: folder.getUrl(), folderName: week };
+  return { ok: true, items: items, folderUrl: folder.getUrl(), folderName: folder.getName() };
 }
 
 // ---------- helpers ----------
+// The existing folder named ROOT_FOLDER_NAME (found once, then remembered by its ID, so renaming it later is fine).
+// HW_ROOT_ID is a new key on purpose: older versions remembered the "Fancam Submissions" folder under ROOT_FOLDER_ID.
 function rootFolder() {
   const props = PropertiesService.getScriptProperties();
-  const id = props.getProperty('ROOT_FOLDER_ID');
-  if (id) { try { return DriveApp.getFolderById(id); } catch (e) {} }
-  const folder = DriveApp.createFolder(ROOT_FOLDER_NAME);
-  props.setProperty('ROOT_FOLDER_ID', folder.getId());
+  const id = props.getProperty('HW_ROOT_ID');
+  if (id) { try { const f = DriveApp.getFolderById(id); if (!f.isTrashed()) return f; } catch (e) {} }
+  const it = DriveApp.getFoldersByName(ROOT_FOLDER_NAME);
+  const folder = it.hasNext() ? it.next() : DriveApp.createFolder(ROOT_FOLDER_NAME);
+  props.setProperty('HW_ROOT_ID', folder.getId());
   return folder;
 }
+// Find this week's folder even if it's written "HW 2" or "hw2 - Nov 1" (but never take HW20 for HW2).
+function findSub(parent, name) {
+  const want = String(name).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const it = parent.getFolders();
+  while (it.hasNext()) {
+    const f = it.next(), n = f.getName().toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (n === want || (n.indexOf(want) === 0 && !/^[0-9]/.test(n.slice(want.length)))) return f;
+  }
+  return null;
+}
 function subFolder(parent, name) {
-  const it = parent.getFoldersByName(name);
-  return it.hasNext() ? it.next() : parent.createFolder(name);
+  return findSub(parent, name) || parent.createFolder(name);
 }
 function clean(s) { return String(s || '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60); }
 function norm(s) { return String(s || '').trim().toLowerCase(); }
