@@ -30,7 +30,7 @@ const { chromium } = require('playwright');
   const uploadShown = () => page.evaluate(() => getComputedStyle(document.getElementById('step2')).display !== 'none');
   console.log('no member yet: upload step shown', await uploadShown());
   await page.click('#members button:has-text("Member B")');
-  console.log('picked Member B: upload step shown', await uploadShown());
+  console.log('picked Member B: upload step shown', await uploadShown(), '| member video loading before upload:', await page.evaluate(() => !!window.__dance.memberLoading || window.__dance.dur.f > 0), '| hint', JSON.stringify(await page.textContent('#memberHint')));
   await page.click('#sampleOwn');
   await page.waitForFunction(() => window.__dance.env.p && window.__dance.dur.f > 0, null, { timeout: 60000 });
   console.log('video read, before mirror answer: ready disabled', await page.isDisabled('#videoReady'), '| note', JSON.stringify(await page.textContent('#readyNote')), '| check shown', await shown());
@@ -43,8 +43,11 @@ const { chromium } = require('playwright');
   await page.reload();
   await page.waitForFunction(() => window.__dance && window.__dance.assignments.length, null, { timeout: 20000 });
   await page.evaluate(() => { const s = document.getElementById('assignment'); s.value = 'demo'; s.dispatchEvent(new Event('change')); });
+  await page.waitForTimeout(1000);
+  console.log('after reopening, before upload: member', await page.evaluate(() => window.__dance.member && window.__dance.member.name), '| downloaded', await page.evaluate(() => window.__dance.dur.f > 0 || !!window.__dance.memberLoading), '| hint', JSON.stringify(await page.textContent('#memberHint')));
+  await page.click('#sampleOwn');
   await page.waitForFunction(() => window.__dance.dur.f > 0, null, { timeout: 60000 });
-  console.log('after reopening: member', await page.evaluate(() => window.__dance.member && window.__dance.member.name),
+  console.log('after reopening + upload: member', await page.evaluate(() => window.__dance.member && window.__dance.member.name),
     '| pressed', JSON.stringify(await page.textContent('#members button[aria-pressed="true"]')), '| hint', JSON.stringify(await page.textContent('#memberHint')),
     '| upload step shown', await uploadShown());
   await browser.close();

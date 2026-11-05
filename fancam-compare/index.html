@@ -782,6 +782,7 @@ async function loadOwn(file) {
   const name = file.name || 'Your video', meta = $('metaP');
   meta.textContent = name + ' · reading the sound…';
   refreshSteps();
+  if (S.member && !(S.dur.f > 0) && S.memberLoading !== S.member) loadMemberVideo(S.member);   // now fetch the member's video
   try {
     const { ab } = await decodeVideoAudio(file);
     S.audio.p = ab; meta.textContent = name + ' · ' + fmt(ab.duration);
@@ -911,9 +912,17 @@ async function chooseMember(m, restored) {
   S.member = m; S.mirrorF = m.mirror !== false;
   renderMembers(); applyTransforms(); refreshSteps();
   $('labelF').textContent = m.name;
-  const token = ++S.loadToken, hint = $('memberHint');
-  hint.textContent = again + 'Loading ' + m.name + "'s video…";
   if (!restored && !S.videoReady) scrollToStep(2);                  // next: your video
+  // Download the member's video (about 50 MB) only once the kid has picked their own video,
+  // so opening the page just to look around doesn't use phone data. Already downloaded = use it now.
+  if (S.file.p || S.memberCache[m.video]) loadMemberVideo(m, again);
+  else { ++S.loadToken; $('memberHint').textContent = `${again}We'll get ${m.name}'s video ready after you upload yours.`; }
+}
+async function loadMemberVideo(m, again = '') {
+  if (S.member !== m) return;
+  const token = ++S.loadToken, hint = $('memberHint');
+  S.memberLoading = m;
+  hint.textContent = again + 'Loading ' + m.name + "'s video…";
   try {
     let c = S.memberCache[m.video];
     if (!c) {
@@ -936,7 +945,7 @@ async function chooseMember(m, restored) {
   } catch (e) {
     console.error(e);
     if (token === S.loadToken) hint.textContent = `Couldn't load ${m.name}'s video. Check your connection and tap the name again.`;
-  }
+  } finally { if (token === S.loadToken) S.memberLoading = null; }
 }
 
 // ---------- 3. check the match ----------
