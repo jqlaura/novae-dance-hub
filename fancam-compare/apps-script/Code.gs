@@ -14,8 +14,9 @@
 const TEAM_CODE = 'change-me';          // what the kids type before they can submit (not case-sensitive)
 // =========================
 
+// Laura's homework folder (holds HW1, HW2, …). Found by name, so no folder link sits in this public file.
+// Keep it private (Restricted); the script opens each HW folder for anyone with that folder's link.
 const ROOT_FOLDER_NAME = 'Novae - NEON Homework';
-const ROOT_FOLDER_ID = '1do6ASs4IuxDwvDmtnB4Vqq85mUZFgHuE';   // that folder (holds HW1, HW2, …); found by ID, so renaming or moving it is fine
 const CHUNK = 8 * 1024 * 1024;          // must be a multiple of 256 KB (Drive's rule for resumable uploads)
 const MAX_SIZE = 1024 * 1024 * 1024;    // refuse anything over 1 GB
 
@@ -130,8 +131,21 @@ function list(req) {
 }
 
 // ---------- helpers ----------
+// Found by name the first time, then remembered by ID in this script's own settings (not in the repo),
+// so renaming or moving the folder later is fine. Prefers a folder you own if several share the name.
 function rootFolder() {
-  return DriveApp.getFolderById(ROOT_FOLDER_ID);
+  const props = PropertiesService.getScriptProperties(), id = props.getProperty('HOMEWORK_FOLDER_ID');
+  if (id) { try { const f = DriveApp.getFolderById(id); if (!f.isTrashed()) return f; } catch (e) {} }
+  const me = Session.getEffectiveUser().getEmail(), it = DriveApp.getFoldersByName(ROOT_FOLDER_NAME);
+  let pick = null;
+  while (it.hasNext()) {
+    const f = it.next(); if (f.isTrashed()) continue;
+    if (!pick) pick = f;
+    try { if (f.getOwner() && f.getOwner().getEmail() === me) { pick = f; break; } } catch (e) {}
+  }
+  if (!pick) throw new Error('Laura\'s "' + ROOT_FOLDER_NAME + '" folder was not found');
+  props.setProperty('HOMEWORK_FOLDER_ID', pick.getId());
+  return pick;
 }
 // Find this week's folder even if it's written "HW 2" or "hw2 - Nov 1" (but never take HW20 for HW2).
 function findSub(parent, name) {
