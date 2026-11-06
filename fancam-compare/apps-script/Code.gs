@@ -108,9 +108,12 @@ function list(req) {
     Utilities.sleep(1500);
     return { ok: false, code: 'passcode', error: 'wrong team code' };
   }
-  const root = rootFolder(), week = clean(req.assignment) || 'Other', folder = findSub(root, week);
-  // a link to this week's folder for Laura (or the main folder if this week's isn't there yet)
-  if (!folder) return { ok: true, items: [], folderUrl: root.getUrl(), folderName: root.getName() };
+  // this week's HW folder (made if it isn't there yet), opened for anyone with its link;
+  // the link only goes to people who typed the team code
+  const week = clean(req.assignment) || 'Other';
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  let folder;
+  try { folder = shareByLink(subFolder(rootFolder(), week)); } finally { lock.releaseLock(); }
   const files = folder.getFiles(), people = {};
   while (files.hasNext()) {
     const f = files.next(), fname = f.getName();
@@ -141,7 +144,15 @@ function findSub(parent, name) {
   return null;
 }
 function subFolder(parent, name) {
-  return findSub(parent, name) || parent.createFolder(name);
+  return findSub(parent, name) || shareByLink(parent.createFolder(name));
+}
+// Each HW folder opens for anyone who has its link (no Google sign-in needed), while the main
+// "Novae - NEON Homework" folder stays private. The page only hands out a HW link after the team code.
+function shareByLink(folder) {
+  try {
+    if (folder.getSharingAccess() !== DriveApp.Access.ANYONE_WITH_LINK) folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (e) { console.error('could not share ' + folder.getName() + ': ' + e); }
+  return folder;
 }
 function clean(s) { return String(s || '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60); }
 function norm(s) { return String(s || '').trim().toLowerCase(); }
