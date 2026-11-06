@@ -132,16 +132,17 @@ function list(req) {
 
 // ---------- helpers ----------
 // Found by name the first time, then remembered by ID in this script's own settings (not in the repo),
-// so renaming or moving the folder later is fine. Prefers a folder you own if several share the name.
+// so renaming or moving the folder later is fine. If several folders share the name, the one with a
+// "Fancams" folder inside wins. (Uses only Drive access, nothing else needs to be allowed.)
 function rootFolder() {
   const props = PropertiesService.getScriptProperties(), id = props.getProperty('HOMEWORK_FOLDER_ID');
   if (id) { try { const f = DriveApp.getFolderById(id); if (!f.isTrashed()) return f; } catch (e) {} }
-  const me = Session.getEffectiveUser().getEmail(), it = DriveApp.getFoldersByName(ROOT_FOLDER_NAME);
+  const it = DriveApp.getFoldersByName(ROOT_FOLDER_NAME);
   let pick = null;
   while (it.hasNext()) {
     const f = it.next(); if (f.isTrashed()) continue;
     if (!pick) pick = f;
-    try { if (f.getOwner() && f.getOwner().getEmail() === me) { pick = f; break; } } catch (e) {}
+    if (f.getFoldersByName('Fancams').hasNext()) { pick = f; break; }
   }
   if (!pick) throw new Error('Laura\'s "' + ROOT_FOLDER_NAME + '" folder was not found');
   props.setProperty('HOMEWORK_FOLDER_ID', pick.getId());
