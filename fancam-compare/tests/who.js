@@ -26,18 +26,18 @@ const { chromium } = require('playwright');
 
   // "My video is ready!" gating
   await page.evaluate(() => { const s = document.getElementById('assignment'); s.value = 'demo'; s.dispatchEvent(new Event('change')); });
-  const shown = () => page.evaluate(() => getComputedStyle(document.getElementById('step5')).display !== 'none');
+  const shown = () => page.evaluate(() => getComputedStyle(document.getElementById('step6')).display !== 'none');
   const uploadShown = () => page.evaluate(() => getComputedStyle(document.getElementById('step2')).display !== 'none');
   console.log('no member yet: upload step shown', await uploadShown());
   await page.click('#members button:has-text("Member B")');
   console.log('picked Member B: upload step shown', await uploadShown(), '| member video loading before upload:', await page.evaluate(() => !!window.__dance.memberLoading || window.__dance.dur.f > 0), '| hint', JSON.stringify(await page.textContent('#memberHint')));
   await page.click('#sampleOwn');
   await page.waitForFunction(() => window.__dance.env.p && window.__dance.dur.f > 0, null, { timeout: 60000 });
-  console.log('video read, before mirror answer: ready disabled', await page.isDisabled('#videoReady'), '| note', JSON.stringify(await page.textContent('#readyNote')), '| check shown', await shown());
+  console.log('video read, before mirror answer: ready disabled', await page.isDisabled('#videoReady'), '| note', JSON.stringify(await page.textContent('#readyNote')), '| comparison step shown', await shown());
   await page.click('#mirrorChoice button[data-v="no"]');
-  console.log('mirror answered: ready disabled', await page.isDisabled('#videoReady'), '| check shown', await shown());
+  console.log('mirror answered: ready disabled', await page.isDisabled('#videoReady'), '| comparison step shown', await shown());
   await page.click('#videoReady');
-  console.log('tapped ready: button', JSON.stringify(await page.textContent('#videoReady')), '| check shown', await shown());
+  console.log('tapped ready: button', JSON.stringify(await page.textContent('#videoReady')), '| comparison step shown', await shown());
 
   // open the page again: the member is picked already
   await page.reload();

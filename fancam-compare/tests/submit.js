@@ -3,7 +3,7 @@
 const { chromium } = require('playwright');
 (async () => {
   const port = process.argv[2] || '8765';
-  const mode = process.argv[3] || 'upload';     // 'upload' or 'cancel'
+  const mode = process.argv[3] || 'upload';     // 'upload', 'cancel' or 'original'
   const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   const page = await browser.newPage({ viewport: { width: 400, height: 860 } });
   page.on('pageerror', (e) => console.log('[pageerror]', e.message));
@@ -35,12 +35,11 @@ const { chromium } = require('playwright');
   await page.waitForTimeout(800);
   const stills = await page.evaluate(() => ['stillP', 'stillP2'].map((id) => document.getElementById(id).style.transform));
   console.log('Check the match, your stills:', JSON.stringify(stills));
-  await page.click('#looksRight');
-  await page.click('#exportBtn');
   await page.waitForFunction(() => !document.getElementById('result').hidden, null, { timeout: 180000 });
   const size = await page.evaluate(() => window.__dance.outBlob.size);
   await page.evaluate(() => { window.__dance._timeouts = { start: 2000, chunk: 3000 }; });
-  await page.click('#finalChoice button[data-v="yes"]');
+  await page.click(mode === 'original' ? '#finalChoice button[data-v="orig"]' : '#finalChoice button[data-v="yes"]');
+  let startReq = null; page.on('request', (r) => { try { const j = JSON.parse(r.postData() || '{}'); if (j.action === 'start') startReq = j; } catch (e) {} });
   await page.fill('#kidName', 'Test'); await page.fill('#teamCode', 'x');
   if (mode === 'cancel') {          // pieces never answer; the kid taps Cancel
     await page.evaluate(() => { window.__dance._timeouts = { start: 2000, chunk: 60000 }; });
@@ -62,5 +61,7 @@ const { chromium } = require('playwright');
     '| non-final pieces multiple of 256 KB:', pieces.slice(0, -1).every((p) => p.len % 262144 === 0));
   console.log('notes seen:', [...notes].filter(Boolean).join(' | '));
   console.log('final note:', await page.textContent('#submitNote'), '| submitted:', await page.evaluate(() => window.__dance.submitted));
+  const sizes = await page.evaluate(() => ({ original: window.__dance.file.p.size, comparison: window.__dance.outBlob && window.__dance.outBlob.size }));
+  console.log('sent', pieces.length ? pieces[pieces.length - 1].size : 0, 'bytes | original', sizes.original, '| comparison', sizes.comparison, '| member label:', startReq && startReq.member, '| mime:', startReq && startReq.mime);
   await browser.close();
 })();

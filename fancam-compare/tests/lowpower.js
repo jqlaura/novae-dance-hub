@@ -26,13 +26,6 @@ const { chromium } = require('playwright');
   console.log('preview blocked -> buttons:', JSON.stringify(await btns()), '| preview playing:', await page.evaluate(() => !document.getElementById('frameVid').paused));
   await page.click('#frame .tapshow'); await page.waitForTimeout(500);
   console.log('after tap -> buttons:', JSON.stringify(await btns()), '| preview playing:', await page.evaluate(() => !document.getElementById('frameVid').paused));
-  await page.click('#mirrorChoice button[data-v="no"]');
-  await page.click('#videoReady');
-  await page.waitForFunction(() => window.__dance.aligned, null, { timeout: 60000 });
-  await page.waitForTimeout(1500);
-  console.log('check the match -> buttons:', JSON.stringify(await btns()));
-  if ((await btns()).length) { await page.locator('.thumb .tapshow:visible').first().click(); await page.waitForTimeout(1200); }
-  console.log('after one tap -> buttons:', JSON.stringify(await btns()), '| frames at:', JSON.stringify(await page.evaluate(() => ['stillP', 'startVid', 'stillP2', 'startVid2'].map((id) => +document.getElementById(id).currentTime.toFixed(2)))),
-    '| expected:', JSON.stringify(await page.evaluate(() => [document.getElementById('stillPt').textContent, document.getElementById('stillFt').textContent, document.getElementById('stillPt2').textContent, document.getElementById('stillFt2').textContent])));
+  console.log('low power hint shown:', await page.isVisible('text=Low Power Mode'));
   await browser.close();
 })();
