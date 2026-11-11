@@ -1,6 +1,6 @@
 # CLAUDE.md — Novae Dance Hub
 
-> **接手先读 `HANDOFF.md`**（2026-11-04：外观、压缩、Drive、提交、上线全部接好；只差用户用真 iPhone 测）。
+> **接手先读 `HANDOFF.md`**（2026-11-04 写的，部分已过时；以本文件为准）。2026-11-11：用户在手机上测过，第 8 版（Who are you? + 专属视频 + 填开始时间 + 微调）工作正常。
 
 用户带一个小孩舞队。这个仓库放给舞队用的小工具。用户用中文沟通，回复用简单直白的中文。
 
@@ -21,7 +21,7 @@
 - **第 6 版（用户 2026-11-07）**：① **取消 Check the match**（孩子可能跳错，只要音乐对就行；step5 永远隐藏，相关代码留着没用）：点 “My video is ready!” 后，对齐好了就**自动生成**对比视频（`autoGenerate`；没有 WebCodecs 的旧录屏方式需要点按钮）。步骤变成 1 成员 → 2 上传 → 3 Your comparison video。② 最后的问题有**第三个选项** “Comparison not working? Submit my original video”：上传孩子的**原视频**（`S.submitOriginal`），Drive 文件名里成员写成 “成员 (original)”；生成失败时也会出现 “Submit your original video instead”。③ **下载的文件名不带孩子名字**（作业_成员_日期），因为手机上记住的名字可能是别人的（用户在自己手机上测过 Elena）；提交表单里记住名字照旧。④ 第 2 步预览下面提醒 “Video looks black? Turn off Low Power Mode…”。
 - **Olivia 的视频（2026-11-07 用户说“对错了”）**：音乐对齐是对的（两种方法都是孩子 0:00 = Merci 0:22.2）。看着不对是因为孩子中间一段还没学、站着不动，而第 2 个检查点刚好落在那里；她重新开始跳以后比音乐早约半秒。用户结论：只要音乐对就行，所以取消了检查环节。
 - **第 7 版：孩子填开始时间（用户 2026-11-11）**：起因是 Alayna 的 11 秒视频（跳 Young 1:35 那段，经微信转发）被对到了 Young 1:23，音乐完全不对：和弦在 0:42 和 1:34 两处打平（歌里重复），旧代码打平时改成在**整首歌里只比鼓点**，鼓点到处都像，选了个和弦根本不像的位置。用户要求：**孩子填 “When does your part start in the song?”（Laura 布置作业时会告诉他们秒数，比如 1:35）**，填了才能点 My video is ready!。对齐只在 **[填的时间 −15 秒, +8 秒]** 里找（`runAlign` → `matchMusic({lo, hi})`；+3 秒太窄，填 1:30 时会差 0.9 秒）。改了时间要重新点 ready。另外 `matchMusic` 和弦打平时只在打平的几个候选里用鼓点挑，不再全曲搜鼓点；和弦整体很弱（<0.2）才退回鼓点。实测：填 1:28–1:45 都对到 Young 1:33.6（正确）。作业安排会变、孩子可能换成员对比、可能一条或多条，所以**不要按孩子写死段落**。**微调（2026-11-11 加上，用户：不是重点，时间对了一般不需要）**：生成的视频下面一个默认收起的 “Picture a little out of sync?”，±0.2s（+ = 孩子变晚，改的是 `S.d`），再按 “Make it again” 重新生成；没改动时按钮是灰的。测试 `node tests/fine.js <输出目录> <端口>`（+0.4s → 孩子晚 12 帧）。
-- **9 个孩子的专属参考视频（2026-11-11）**：9 个 MPD 10.22 直拍声音完全一样、时间差 0 ms、长度都是 235.8 秒，所以可以按秒拼接。用户给了改过的队形（谁在几秒到几秒跳谁的部分），每个孩子一个视频 = 主成员直拍 + 换位那几秒换成别人的画面，声音用原演出音轨。最终换位表在本会话的 scratchpad `build_swaps.py`（KIDS），已核对每一秒每个位置正好一人。孩子 ↔ 主成员：Karina–Aijing、Elena–Oa、Hannah–Himeki、Alayna–Vora、Lilith–Merci、Coco–Young、Sophie–Rada、Olivia–Xili、Angie–Ayune。通过 Apps Script（口令）传到 Drive “Novae - NEON Homework / Fancams - Novae formation”，文件名 “孩子 · 主成员 · 时间.mp4”；旧版 Alayna/Karina/Elena 要用户手动删（我们不能删 Drive 文件）。还没接进网页。
+- **9 个孩子的专属参考视频（2026-11-11）**：9 个 MPD 10.22 直拍声音完全一样、时间差 0 ms、长度都是 235.8 秒，所以可以按秒拼接。用户给了改过的队形（谁在几秒到几秒跳谁的部分），每个孩子一个视频 = 主成员直拍 + 换位那几秒换成别人的画面，声音用原演出音轨。最终换位表在本会话的 scratchpad `build_swaps.py`（KIDS），已核对每一秒每个位置正好一人。孩子 ↔ 主成员：Karina–Aijing、Elena–Oa、Hannah–Himeki、Alayna–Vora、Lilith–Merci、Coco–Young、Sophie–Rada、Olivia–Xili、Angie–Ayune。通过 Apps Script（口令）传到 Drive “Novae - NEON Homework / Fancams - Novae formation”，文件名 “孩子 · 主成员 · 时间.mp4”；旧版已由用户删掉。已接进网页（第 8 版 “Who are you?”）。以后队形再改：按新的换位表重剪对应孩子的视频、传 Drive、把 `assignments.json` 里该孩子的 `video` 换成新文件 ID（我们不能删 Drive 文件，旧文件请用户删）。
 - **第 8 版：“Who are you?”（用户 2026-11-11）**：第 1 步改成孩子点自己的名字（`assignments.json` 里作业的 `kids`：name / member / video = 她的专属视频的 Drive ID），网页就用给她做的专属视频（主成员 + 队形改动），交作业的名字自动填好；手机记住孩子（`fancam.kid.<作业id>`）。原版 9 个成员收在 “Compare with an original member instead” 下面。没有 `kids` 的作业（如 Demo）照旧是 “Pick your member”。注意：孩子的名字在公开仓库的 assignments.json 里。
 - Artifact 片段用 `python3 fancam-compare/tools/build_artifact.py index.html OUT` 生成（取 `artifact:*` 标记之间的内容）。
 - 决定：全部在手机浏览器里处理，视频不上传、不存 GitHub（未成年人隐私；GitHub 单文件 100 MB 限制）。
