@@ -35,7 +35,9 @@ const { chromium } = require('playwright');
   await page.waitForFunction(() => window.__dance.env.p && window.__dance.dur.f > 0, null, { timeout: 60000 });
   console.log('video read, before mirror answer: ready disabled', await page.isDisabled('#videoReady'), '| note', JSON.stringify(await page.textContent('#readyNote')), '| comparison step shown', await shown());
   await page.click('#mirrorChoice button[data-v="no"]');
-  console.log('mirror answered: ready disabled', await page.isDisabled('#videoReady'), '| comparison step shown', await shown());
+  console.log('mirror answered, no time yet: ready disabled', await page.isDisabled('#videoReady'), '| note', JSON.stringify(await page.textContent('#readyNote')));
+  await page.fill('#partStart', '0:00');   // the demo practice video starts before Member B's part
+  console.log('time typed: ready disabled', await page.isDisabled('#videoReady'), '| comparison step shown', await shown());
   await page.click('#videoReady');
   console.log('tapped ready: button', JSON.stringify(await page.textContent('#videoReady')), '| comparison step shown', await shown());
 

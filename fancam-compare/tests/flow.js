@@ -16,6 +16,7 @@ const path = require('path');
   await page.click('#sampleOwn');
   await page.waitForFunction(() => window.__dance.env.p, null, { timeout: 60000 });
   await page.click('#mirrorChoice button[data-v="no"]');
+  await page.fill('#partStart', '0:00');   // the demo practice video starts before Member B's part
   await page.click('#videoReady');
   const preview = await page.evaluate(() => ({ frame: document.getElementById('frameVid').style.transform, note: document.getElementById('mirrorNote').textContent, mirror: window.__dance.mirror }));
   console.log('after "No":', JSON.stringify(preview));

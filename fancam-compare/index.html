@@ -111,6 +111,9 @@ select:focus-visible, input[type=text]:focus-visible { outline: 2px solid var(--
 .matchok { margin: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-weight: 700; color: var(--ok); }
 .matchpair figure { margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .choices .choice.wide { grid-column: 1 / -1; }
+.partstart { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.partstart .k { font-weight: 700; }
+.partstart input { max-width: 170px; font-variant-numeric: tabular-nums; }
 .matchpair .thumb { position: relative; aspect-ratio: 9 / 16; background: #000; border-radius: 12px; overflow: hidden; }
 /* shown on a black video when the phone won't play it by itself (iPhone Low Power Mode) */
 .tapshow { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; border: 0; padding: 12px; background: rgba(0, 0, 0, 0.55); color: #fff; font: inherit; font-weight: 700; font-size: 14px; text-align: center; cursor: pointer; }
@@ -279,6 +282,11 @@ canvas#rec { display: none; }
       </div>
       <p class="small">Drag to put yourself on the center line. Pinch with two fingers to zoom. <button class="link" id="resetCrop" type="button">Reset</button></p>
       <p class="small">Video looks black? Turn off <b>Low Power Mode</b> (Settings → Battery), then tap the video.</p>
+      <div class="partstart">
+        <label class="k" for="partStart">When does your part start in the song?</label>
+        <input id="partStart" type="text" inputmode="decimal" placeholder="e.g. 1:35" autocomplete="off" spellcheck="false" aria-describedby="partHint">
+        <p class="small" id="partHint">Use the time Laura gave you. We match the music near that time.</p>
+      </div>
       <button class="btn sm" id="videoReady" type="button" disabled>My video is ready!</button>
       <p class="small" id="readyNote">Answer the mirror question first.</p>
     </div>
@@ -671,13 +679,20 @@ function matchMusic(range) {
     return (lo <= hi && align(S.env.p, S.env.f, { lo, hi })) || { d, score: 0 };
   };
   const top = c.cands[0], agree = o && Math.abs(o.d - top.d) < 0.6, notesSure = c.ratio >= 1.08;
-  let r, how;
-  if (agree) { r = o; how = 'notes+beats'; }
-  else if (notesSure || !o) { r = refine(top.d); how = 'notes'; }
-  else { r = o; how = 'beats (notes unsure)'; }
-  const pick = agree || how === 'notes' ? top : null;
+  let r, how, pick = null;
+  if (agree) { r = o; how = 'notes+beats'; pick = top; }
+  else if (notesSure || !o) { r = refine(top.d); how = 'notes'; pick = top; }
+  else if (top.score >= 0.2) {
+    // The notes fit a few places about equally (the song repeats a part, e.g. a chorus). Choose among
+    // THOSE places by the beats. Never search the whole song by beats alone: beats sound alike everywhere
+    // (user 2026-11-11: an 11 s clip fit 0:42 and 1:34 equally by notes; the whole-song beat search said 1:23).
+    const tries = c.cands.filter((x) => x.score >= top.score * 0.9).map((x) => ({ x, r: refine(x.d) }));
+    const best = tries.find((t) => Math.abs(t.r.d - o.d) < 0.6) || tries.reduce((a, b) => (b.r.score > a.r.score ? b : a));
+    r = best.r; pick = best.x; how = tries.length > 1 ? 'notes (repeated part) + beats' : 'notes';
+  }
+  else { r = o; how = 'beats (notes too weak)'; }
   const others = c.cands.filter((x) => x !== pick).slice(0, 2).map((x) => refine(x.d).d);
-  return { d: r.d, score: r.score, cscore: pick ? pick.score : null, ratio: how === 'notes' ? c.ratio : Math.max(o.ratio, agree ? c.ratio : 0),
+  return { d: r.d, score: r.score, cscore: pick ? pick.score : null, ratio: pick && !agree ? c.ratio : Math.max(o.ratio, agree ? c.ratio : 0),
     candidates: [r.d, ...others], how, notes: c.cands.slice(0, 3).map((x) => x.d.toFixed(1) + ':' + x.score.toFixed(2)).join(' ') };
 }
 // returns { d, ratio, candidates } with fancamTime = practiceTime + d
@@ -803,7 +818,7 @@ async function loadOwn(file) {
   }
   await waitMeta(vid.p); S.dur.p = Math.min(S.audio.p.duration, vid.p.duration || Infinity);
   refreshSteps();
-  if (S.env.f) runAlign();
+  if (S.env.f && S.videoReady) runAlign();
 }
 const waitMeta = (v) => v.readyState >= 1 ? Promise.resolve() : new Promise((r) => v.addEventListener('loadedmetadata', r, { once: true }));
 
@@ -870,13 +885,24 @@ function setVideoReady(on) {
 // the button works once the sound is read and the mirror question is answered
 function updateReadyBtn() {
   const b = $('videoReady'), note = $('readyNote');
-  const canGo = !!S.env.p && !S.ownError && S.mirrorAnswered;
+  const hasTime = parseTime($('partStart').value) != null;
+  const canGo = !!S.env.p && !S.ownError && S.mirrorAnswered && hasTime;
   b.disabled = !canGo || S.videoReady || S.exporting;
   note.hidden = canGo || S.ownError;
-  note.textContent = !S.env.p ? 'Getting your video ready…' : 'Answer the mirror question first.';
+  note.textContent = !S.env.p ? 'Getting your video ready…' : !S.mirrorAnswered ? 'Answer the mirror question first.' : 'Type when your part starts, like 1:35.';
+}
+// "1:35", "1.35", "135" -> 95 seconds; "45" -> 45 seconds. Anything else -> null.
+function parseTime(str) {
+  const t = String(str || '').trim().replace(/[.,．。：]/g, ':');
+  let m = /^(\d{1,2}):(\d{1,2})$/.exec(t);
+  if (m) return +m[2] < 60 ? +m[1] * 60 + +m[2] : null;
+  m = /^(\d{1,4})$/.exec(t);
+  if (!m) return null;
+  const n = +m[1]; if (n < 60) return n;
+  return n % 100 < 60 && n >= 100 ? Math.floor(n / 100) * 60 + (n % 100) : null;
 }
 function resetMirrorQuestion() {
-  setVideoReady(false);
+  setVideoReady(false); S.partStart = null;
   S.mirrorAnswered = false; S.mirror = false; applyTransforms(); pressSeg('mirrorChoice', () => false);
   $('mirrorNote').textContent = 'Mirrored = looks like dancing in front of a mirror.';
 }
@@ -948,7 +974,7 @@ async function loadMemberVideo(m, again = '') {
     S.dur.f = Math.min(c.ab.duration, vid.f.duration || Infinity);
     hint.textContent = `${again}${m.name}'s video is ready (${fmt(S.dur.f)}).`;
     setupStart(); refreshSteps();
-    if (S.env.p) runAlign();
+    if (S.env.p && S.videoReady) runAlign();
     if (S.videoReady) scrollToStep(5);                                // only jump ahead once your video is ready too
   } catch (e) {
     console.error(e);
@@ -1062,8 +1088,13 @@ function applyFix() {
 
 // ---------- alignment ----------
 function runAlign() {
+  // Look only near the start time the kid typed: from 15 s before it (videos often start a bit
+  // before the part) to 8 s after (kids' times are rough). Outside that the music can't win,
+  // however alike it sounds; repeated parts of a song are much further apart than this.
+  if (S.partStart == null || !S.env.p || !S.env.f) return;
+  const T = S.partStart;
   status('busy', 'Matching the music…');
-  const r = matchMusic();
+  const r = matchMusic({ lo: T - 15, hi: T + 8 }) || { d: T, ratio: 1, candidates: [T], how: 'typed time', notes: '' };
   S.lastAlign = r; S.cand = r.candidates; S.candIdx = 0;
   S.d = r.d; S.aligned = true; S.T = 0; S.manualMatch = false; S.matchConfirmed = false; $('matchOk').hidden = true; $('matchBtns').hidden = false;
   const sure = r.ratio >= 1.05;
@@ -1847,10 +1878,16 @@ $('sampleOwn').addEventListener('click', async () => {
   try { const b = await (await fetch('samples/practice.mp4')).blob(); await loadOwn(new File([b], 'sample-practice.mp4', { type: 'video/mp4' })); }
   catch (e) { $('metaP').textContent = "Couldn't load the sample."; }
 });
+$('partStart').addEventListener('input', () => {
+  if (S.exporting) return;
+  if (S.videoReady) { setVideoReady(false); S.aligned = false; S.partStart = null; invalidateResult(); refreshSteps(); }
+  updateReadyBtn();
+});
 $('videoReady').addEventListener('click', () => {
   if ($('videoReady').disabled) return;
+  S.partStart = parseTime($('partStart').value);
   setVideoReady(true); refreshSteps(); scrollToStep(6);
-  if (S.aligned) autoGenerate();
+  if (S.env.p && S.env.f) runAlign();                       // matches, then makes the video
   else if (S.member) status('busy', `Getting ${S.member.name}'s video ready…`, 'Your comparison video starts by itself when it is ready.');
 });
 $('mirrorChoice').addEventListener('click', (e) => {
