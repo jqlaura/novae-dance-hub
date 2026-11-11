@@ -1,0 +1,32 @@
+// Fine-tune: make the video, shift the kid +0.4 s (two taps), make it again; save both videos.
+const { chromium } = require('playwright');
+const fs = require('fs'), path = require('path');
+(async () => {
+  const [out, port] = [process.argv[2] || '/tmp', process.argv[3] || '8765'];
+  const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+  const page = await browser.newPage({ viewport: { width: 400, height: 860 } });
+  page.on('pageerror', (e) => console.log('[pageerror]', e.message));
+  await page.goto(`http://127.0.0.1:${port}/index.html`);
+  await page.waitForFunction(() => window.__dance && window.__dance.assignments.length, null, { timeout: 20000 });
+  await page.evaluate(() => { const s = document.getElementById('assignment'); s.value = 'demo'; s.dispatchEvent(new Event('change')); });
+  await page.click('#members button:has-text("Member B")');
+  await page.click('#sampleOwn');
+  await page.waitForFunction(() => window.__dance.env.p, null, { timeout: 60000 });
+  await page.click('#mirrorChoice button[data-v="yes"]');
+  await page.fill('#partStart', '0:00');
+  await page.click('#videoReady');
+  await page.waitForFunction(() => !document.getElementById('result').hidden, null, { timeout: 180000 });
+  const save = async (name) => { const b64 = await page.evaluate(async () => { const buf = new Uint8Array(await window.__dance.outBlob.arrayBuffer()); let s = ''; for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000)); return btoa(s); }); fs.writeFileSync(path.join(out, name), Buffer.from(b64, 'base64')); };
+  await save('fine_before.mp4');
+  const d0 = await page.evaluate(() => window.__dance.d);
+  console.log('folded by default:', !(await page.evaluate(() => document.getElementById('fine').open)), '| make-again disabled before any shift:', await page.isDisabled('#fineRedo'));
+  await page.click('#fine summary');
+  await page.click('#fineNudge button[data-s="0.2"]'); await page.click('#fineNudge button[data-s="0.2"]');
+  console.log('label:', await page.textContent('#fineLbl'), '| d moved by', ((await page.evaluate(() => window.__dance.d)) - d0).toFixed(2), '| make-again enabled:', !(await page.isDisabled('#fineRedo')));
+  const firstBlob = await page.evaluate(() => (window.__first = window.__dance.outBlob, 1));
+  await page.click('#fineRedo');
+  await page.waitForFunction(() => window.__dance.outBlob !== window.__first && !document.getElementById('result').hidden, null, { timeout: 180000 });
+  await save('fine_after.mp4');
+  console.log('after remake: label', await page.textContent('#fineLbl'), '| make-again disabled again:', await page.isDisabled('#fineRedo'));
+  await browser.close();
+})();

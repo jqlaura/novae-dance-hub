@@ -178,6 +178,11 @@ input[type=range] { accent-color: var(--accent); }
 
 details.adjust { border: 1px solid var(--line); border-radius: 16px; padding: 0 14px; }
 details.adjust summary { cursor: pointer; padding: 13px 0; font-weight: 600; }
+details.fine { border: 1px solid var(--line); border-radius: 14px; padding: 0 14px; }
+details.fine summary { cursor: pointer; padding: 11px 0; font-size: 14px; color: var(--muted); }
+.finebody { display: flex; flex-direction: column; gap: 10px; padding-bottom: 14px; }
+.finerow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.finebody .btn.sm { align-self: flex-start; }
 .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
 .row .k { font-weight: 600; } .row .k small { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
 .seg { display: inline-flex; background: var(--bg); border-radius: 999px; padding: 3px; gap: 2px; }
@@ -381,6 +386,19 @@ canvas#rec { display: none; }
       <p class="hint" id="reviewHint">Watch it closely next to your member. Look for moves, angles and timing you want to fix.</p>
       <button class="btn dark" id="saveBtn" type="button">Download video</button>
       <p class="note" id="saveNote"></p>
+      <details class="fine" id="fine">
+        <summary>Picture a little out of sync?</summary>
+        <div class="finebody">
+          <p class="small">Shift your video, then make it again. + makes you later, − makes you earlier.</p>
+          <div class="finerow">
+            <div class="nudge" id="fineNudge">
+              <button type="button" data-s="-0.2">−0.2s</button><button type="button" data-s="0.2">+0.2s</button>
+            </div>
+            <span class="small num" id="fineLbl">Shift: 0.0s</span>
+          </div>
+          <button class="btn sm" id="fineRedo" type="button" disabled>Make it again</button>
+        </div>
+      </details>
       <div class="submit">
         <h3>Are you happy with this homework? Is this your final submission?</h3>
         <div class="choices" id="finalChoice">
@@ -1096,7 +1114,7 @@ function runAlign() {
   status('busy', 'Matching the music…');
   const r = matchMusic({ lo: T - 15, hi: T + 8 }) || { d: T, ratio: 1, candidates: [T], how: 'typed time', notes: '' };
   S.lastAlign = r; S.cand = r.candidates; S.candIdx = 0;
-  S.d = r.d; S.aligned = true; S.T = 0; S.manualMatch = false; S.matchConfirmed = false; $('matchOk').hidden = true; $('matchBtns').hidden = false;
+  S.d = r.d; S.aligned = true; S.T = 0; S.manualMatch = false; S.fineShift = 0; S.shiftMade = 0; showShift(); S.matchConfirmed = false; $('matchOk').hidden = true; $('matchBtns').hidden = false;
   const sure = r.ratio >= 1.05;
   showAlignStatus(sure ? 'ok' : 'warn', sure ? 'Matched to the music' : 'Matched — please check it');
   autoLayout(); recompute(); seekAll(0); refreshSteps(); updateMatchView();
@@ -1663,6 +1681,7 @@ function onRecorded() {
   S.outBlob = new Blob(chunks, { type: chunks[0]?.type || (S.outExt === 'mp4' ? 'video/mp4' : 'video/webm') });
   $('outVid').src = URL.createObjectURL(S.outBlob);
   for (const id of ['outVid', 'reviewHint', 'saveBtn', 'saveNote']) $(id).hidden = false;
+  S.shiftMade = S.fineShift || 0; showShift();
   $('origInstead').hidden = true; S.submitOriginal = false;
   $('exporting').hidden = true; $('result').hidden = false; $('saveNote').textContent = ''; $('submitNote').textContent = '';
   S.submitted = false; $('submitBtn').textContent = 'Submit'; $('upProg').hidden = true; $('exportBtn').hidden = true;
@@ -1865,7 +1884,8 @@ function updateControls() {
   const ready = S.aligned && !S.exporting && !!S.member && S.mirrorAnswered && S.videoReady && !S.ownError;
   updateReadyBtn();
   $('playBtn').disabled = !ready; $('scrub').disabled = !ready; $('exportBtn').disabled = !ready;
-  for (const b of document.querySelectorAll('.adjust button, #mirrorChoice button, #startNudge button')) b.disabled = S.exporting;
+  for (const b of document.querySelectorAll('.adjust button, #mirrorChoice button, #startNudge button, #fineNudge button')) b.disabled = S.exporting;
+  if ($('fineRedo')) showShift();
   const btns = $('members').querySelectorAll('button');
   if (S.assign) S.assign.members.forEach((m, i) => { if (btns[i]) btns[i].disabled = S.exporting || !hasVideo(m); });
   for (const id of ['fileP', 'assignment', 'startRange', 'nextCand', 'sampleOwn']) $(id).disabled = S.exporting;
@@ -1933,6 +1953,24 @@ $('nextCand').addEventListener('click', () => {
   if (was) play();
 });
 $('exportBtn').addEventListener('click', startExport);
+// Fine-tune after the video is made: move the kid's picture against the member's (and the music), then
+// make the video again. "+" = the kid appears later. Rarely needed once the start time is right.
+function showShift() {
+  const v = S.fineShift || 0;
+  $('fineLbl').textContent = 'Shift: ' + (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(1) + 's';
+  $('fineRedo').disabled = S.exporting || Math.abs(v - (S.shiftMade || 0)) < 0.01;
+}
+$('fineNudge').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b || S.exporting || !S.aligned) return;
+  const step = parseFloat(b.dataset.s);
+  S.d += step; S.fineShift = Math.round(((S.fineShift || 0) + step) * 10) / 10;   // more d = member further ahead = you later
+  recompute(); showShift();
+});
+$('fineRedo').addEventListener('click', () => {
+  if (S.exporting || !S.aligned) return;
+  S.shiftMade = S.fineShift || 0; $('fine').open = false;
+  startExport();
+});
 $('origInstead').addEventListener('click', showOriginalOnly);
 $('saveBtn').addEventListener('click', save);
 $('submitBtn').addEventListener('click', submit);
