@@ -261,10 +261,13 @@ canvas#rec { display: none; }
   </section>
 
   <section class="step locked" id="step4">
-    <h2><span class="n">1</span>Pick your member</h2>
+    <h2><span class="n">1</span><span id="whoTitle">Pick your member</span></h2>
+    <div class="members" id="kids" hidden></div>
+    <p class="hint" id="kidHint" hidden>Tap your name. Your video is your member's fancam with our formation changes.</p>
     <div class="members" id="members"></div>
+    <button class="link" id="showMembers" type="button" hidden>Compare with an original member instead</button>
     <p class="hint" id="memberHint">Pick the member you were assigned.</p>
-    <p class="hint">Member videos are mirrored. We remember your member on this phone.</p>
+    <p class="hint">Videos are mirrored. We remember your choice on this phone.</p>
   </section>
 
   <section class="step locked" id="step2">
@@ -782,15 +785,44 @@ async function loadAssignments() {
 }
 const memberKey = () => 'fancam.member.' + (S.assign ? S.assign.id : '');
 function rememberedMember() { try { return localStorage.getItem(memberKey()) || ''; } catch (e) { return ''; } }
+// ---- "Who are you?": each kid has a video made for them (their member + Laura's formation changes)
+const kidKey = () => 'fancam.kid.' + (S.assign ? S.assign.id : '');
+function rememberedKid() { try { return localStorage.getItem(kidKey()) || ''; } catch (e) { return ''; } }
+const kidMember = (k) => ({ name: k.member, video: k.video, mirror: k.mirror !== false, kid: k.name });
+const hasKids = () => !!(S.assign && S.assign.kids && S.assign.kids.length);
+function renderKids() {
+  const box = $('kids'), has = hasKids();
+  box.textContent = ''; box.hidden = !has; $('kidHint').hidden = !has; $('showMembers').hidden = !has;
+  $('whoTitle').textContent = has ? 'Who are you?' : 'Pick your member';
+  // with kids, the original members are tucked away unless asked for (or already picked)
+  $('members').hidden = has && !S.showMembers && !(S.member && !S.member.kid);
+  $('showMembers').textContent = $('members').hidden ? 'Compare with an original member instead' : 'Hide the original members';
+  if (!has) return;
+  for (const k of S.assign.kids) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'choice'; b.textContent = k.name;
+    const sm = document.createElement('small'); sm.textContent = hasVideo(k) ? k.member : 'video not added yet'; b.append(sm);
+    b.setAttribute('aria-pressed', S.member && S.member.kid === k.name ? 'true' : 'false');
+    b.disabled = S.exporting || !hasVideo(k);
+    b.addEventListener('click', () => chooseKid(k));
+    box.append(b);
+  }
+}
+function chooseKid(k, restored) {
+  if (S.exporting || !hasVideo(k)) return;
+  if (!restored || !$('kidName').value.trim()) $('kidName').value = k.name;   // the name for Submit
+  chooseMember(kidMember(k), restored);
+}
 function chooseAssignment(id, quiet) {
   stopPlayback();
   S.assign = S.assignments.find((a) => a.id === id) || null;
   S.member = null; resetMember();
   $('sampleOwn').hidden = !(S.assign && S.assign.demo);
-  renderMembers(); refreshSteps();
-  // the same kid always dances the same member: pick last time's member again
-  const saved = S.assign && S.assign.members.find((m) => m.name === rememberedMember() && hasVideo(m));
-  if (saved) chooseMember(saved, true);
+  renderMembers(); renderKids(); refreshSteps();
+  // the same kid opens the page again: pick them (or last time's member) again
+  const kid = hasKids() && S.assign.kids.find((k) => k.name === rememberedKid() && hasVideo(k));
+  const saved = !kid && S.assign && S.assign.members.find((m) => m.name === rememberedMember() && hasVideo(m));
+  if (kid) chooseKid(kid, true); else if (saved) chooseMember(saved, true);
   if (S.assign && !quiet) scrollToStep(S.member ? 2 : 4);
 }
 function renderMembers() {
@@ -958,10 +990,13 @@ async function fetchWithProgress(url, onp) {
 }
 async function chooseMember(m, restored) {
   if (S.exporting || !hasVideo(m)) return;
-  try { localStorage.setItem(memberKey(), m.name); } catch (e) {}
+  try {
+    if (m.kid) { localStorage.setItem(kidKey(), m.kid); localStorage.removeItem(memberKey()); }
+    else { localStorage.setItem(memberKey(), m.name); localStorage.removeItem(kidKey()); }
+  } catch (e) {}
   const again = restored ? 'Same as last time. Tap another name to change. ' : '';
   stopPlayback(); resetMember();
-  S.member = m; S.mirrorF = m.mirror !== false;
+  S.member = m; S.mirrorF = m.mirror !== false; renderKids();
   renderMembers(); applyTransforms(); refreshSteps();
   $('labelF').textContent = m.name;
   if (!restored && !S.videoReady) scrollToStep(2);                  // next: your video
@@ -1888,6 +1923,7 @@ function updateControls() {
   if ($('fineRedo')) showShift();
   const btns = $('members').querySelectorAll('button');
   if (S.assign) S.assign.members.forEach((m, i) => { if (btns[i]) btns[i].disabled = S.exporting || !hasVideo(m); });
+  if (hasKids()) $('kids').querySelectorAll('button').forEach((b, i) => { const k = S.assign.kids[i]; if (k) b.disabled = S.exporting || !hasVideo(k); });
   for (const id of ['fileP', 'assignment', 'startRange', 'nextCand', 'sampleOwn']) $(id).disabled = S.exporting;
 }
 
@@ -1953,6 +1989,7 @@ $('nextCand').addEventListener('click', () => {
   if (was) play();
 });
 $('exportBtn').addEventListener('click', startExport);
+$('showMembers').addEventListener('click', () => { S.showMembers = $('members').hidden; renderKids(); });
 // Fine-tune after the video is made: move the kid's picture against the member's (and the music), then
 // make the video again. "+" = the kid appears later. Rarely needed once the start time is right.
 function showShift() {

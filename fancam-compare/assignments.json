@@ -1,5 +1,5 @@
 {
-  "note": "One entry per assignment. member.video is a path, a URL, or a Google Drive share link (or drive:<FILE_ID>). mirror: true flips it left-right when shown, so the coach can upload the original fancam. submitUrl = the Apps Script web app URL (ends in /exec). driveApiKey = the Google API key that reads Drive videos. weeks: submissions go to Drive folder <prefix><n>, a new one every Sunday; week 1 starts on firstSunday. defaultAssignment: the dance shown (no picker).",
+  "note": "One entry per assignment. member.video is a path, a URL, or a Google Drive share link (or drive:<FILE_ID>). mirror: true flips it left-right when shown, so the coach can upload the original fancam. submitUrl = the Apps Script web app URL (ends in /exec). driveApiKey = the Google API key that reads Drive videos. weeks: submissions go to Drive folder <prefix><n>, a new one every Sunday; week 1 starts on firstSunday. defaultAssignment: the dance shown (no picker). kids: each kid's own video (their member's fancam with Laura's formation changes); the page asks \"Who are you?\" first and the original members are one tap away.",
   "submitUrl": "https://script.google.com/macros/s/AKfycbwMuveUoispxO7VC2U3hBn-mdtZw_ZshCbsnuraMPtbw_VInR36FUjXwEo-aOOLzKNR/exec",
   "driveApiKey": "AIzaSyCfg9c-_eppB5P2a_EJSkS4pTmW5jznlDs",
   "defaultAssignment": "a2o-lite-neon",
@@ -55,6 +55,62 @@
         {
           "name": "Aijing",
           "video": "drive:1cc8KDP3FmxPUQ_m5EiHyRft6Ey7WNWiE",
+          "mirror": true
+        }
+      ],
+      "kids": [
+        {
+          "name": "Karina",
+          "member": "Aijing",
+          "video": "drive:1TnFl2nD2gCUUYGrljM6eHdOlFdOhbiif",
+          "mirror": true
+        },
+        {
+          "name": "Elena",
+          "member": "Oa",
+          "video": "drive:1f1vvWOz5hOvcitSgmRC74aB0bq4R4nNj",
+          "mirror": true
+        },
+        {
+          "name": "Hannah",
+          "member": "Himeki",
+          "video": "drive:1e5j1CsIXPflZezp8Eo12R90vu7cSM1D5",
+          "mirror": true
+        },
+        {
+          "name": "Alayna",
+          "member": "Vora",
+          "video": "drive:1wmGCn8MCqrVGuRL3qoj82d1B46oRT-1Y",
+          "mirror": true
+        },
+        {
+          "name": "Lilith",
+          "member": "Merci",
+          "video": "drive:1vLS0aLHbCULxkrswbZ80fsk5p1quVX-S",
+          "mirror": true
+        },
+        {
+          "name": "Coco",
+          "member": "Young",
+          "video": "drive:15JIJwSgR4GFwQnncUw8_ephxwGMRzJUc",
+          "mirror": true
+        },
+        {
+          "name": "Sophie",
+          "member": "Rada",
+          "video": "drive:1s5G49YjylawO1rsQ4D7fdG0qWefuc9NJ",
+          "mirror": true
+        },
+        {
+          "name": "Olivia",
+          "member": "Xili",
+          "video": "drive:1KA0Zxoy-t42f12Sy_LK1lwxPMhOWbsRA",
+          "mirror": true
+        },
+        {
+          "name": "Angie",
+          "member": "Ayune",
+          "video": "drive:1DckrncgNVfustltioBIfwhR4t9h4NiWa",
           "mirror": true
         }
       ]
