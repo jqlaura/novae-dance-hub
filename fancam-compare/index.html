@@ -389,12 +389,12 @@ canvas#rec { display: none; }
       <details class="fine" id="fine">
         <summary>Picture a little out of sync?</summary>
         <div class="finebody">
-          <p class="small">Shift your video, then make it again. + makes you later, − makes you earlier.</p>
+          <p class="small">This moves <b>your video</b> (the left side, “You”). <span id="fineWho">Your member</span>'s video and the music stay where they are. Then tap Make it again.</p>
           <div class="finerow">
             <div class="nudge" id="fineNudge">
-              <button type="button" data-s="-0.2">−0.2s</button><button type="button" data-s="0.2">+0.2s</button>
+              <button type="button" data-s="-0.2">−0.2s · you earlier</button><button type="button" data-s="0.2">+0.2s · you later</button>
             </div>
-            <span class="small num" id="fineLbl">Shift: 0.0s</span>
+            <span class="small num" id="fineLbl">Your video: not moved</span>
           </div>
           <button class="btn sm" id="fineRedo" type="button" disabled>Make it again</button>
         </div>
@@ -1957,7 +1957,8 @@ $('exportBtn').addEventListener('click', startExport);
 // make the video again. "+" = the kid appears later. Rarely needed once the start time is right.
 function showShift() {
   const v = S.fineShift || 0;
-  $('fineLbl').textContent = 'Shift: ' + (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(1) + 's';
+  $('fineLbl').textContent = Math.abs(v) < 0.01 ? 'Your video: not moved' : `Your video: ${Math.abs(v).toFixed(1)}s ${v > 0 ? 'later' : 'earlier'}`;
+  $('fineWho').textContent = S.member ? S.member.name : 'Your member';
   $('fineRedo').disabled = S.exporting || Math.abs(v - (S.shiftMade || 0)) < 0.01;
 }
 $('fineNudge').addEventListener('click', (e) => {

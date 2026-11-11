@@ -22,7 +22,7 @@ const fs = require('fs'), path = require('path');
   console.log('folded by default:', !(await page.evaluate(() => document.getElementById('fine').open)), '| make-again disabled before any shift:', await page.isDisabled('#fineRedo'));
   await page.click('#fine summary');
   await page.click('#fineNudge button[data-s="0.2"]'); await page.click('#fineNudge button[data-s="0.2"]');
-  console.log('label:', await page.textContent('#fineLbl'), '| d moved by', ((await page.evaluate(() => window.__dance.d)) - d0).toFixed(2), '| make-again enabled:', !(await page.isDisabled('#fineRedo')));
+  console.log('label:', await page.textContent('#fineLbl'), '| explains:', await page.textContent('#fine .small'), '| d moved by', ((await page.evaluate(() => window.__dance.d)) - d0).toFixed(2), '| make-again enabled:', !(await page.isDisabled('#fineRedo')));
   const firstBlob = await page.evaluate(() => (window.__first = window.__dance.outBlob, 1));
   await page.click('#fineRedo');
   await page.waitForFunction(() => window.__dance.outBlob !== window.__first && !document.getElementById('result').hidden, null, { timeout: 180000 });
