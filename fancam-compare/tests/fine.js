@@ -13,7 +13,7 @@ const fs = require('fs'), path = require('path');
   await page.click('#sampleOwn');
   await page.waitForFunction(() => window.__dance.env.p, null, { timeout: 60000 });
   await page.click('#mirrorChoice button[data-v="yes"]');
-  await page.fill('#partStart', '0:00');
+  await page.fill('#partMin', '0'); await page.fill('#partSec', '00');
   await page.click('#videoReady');
   await page.waitForFunction(() => !document.getElementById('result').hidden, null, { timeout: 180000 });
   const save = async (name) => { const b64 = await page.evaluate(async () => { const buf = new Uint8Array(await window.__dance.outBlob.arrayBuffer()); let s = ''; for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000)); return btoa(s); }); fs.writeFileSync(path.join(out, name), Buffer.from(b64, 'base64')); };

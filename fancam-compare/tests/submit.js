@@ -30,7 +30,7 @@ const { chromium } = require('playwright');
   await page.click('#sampleOwn');
   await page.waitForFunction(() => window.__dance.env.p, null, { timeout: 60000 });
   await page.click('#mirrorChoice button[data-v="no"]');
-  await page.fill('#partStart', '0:00');   // the demo practice video starts before Member B's part
+  await page.fill('#partMin', '0'); await page.fill('#partSec', '00');   // the demo practice video starts before Member B's part
   await page.click('#videoReady');
   await page.waitForFunction(() => window.__dance.aligned, null, { timeout: 60000 });
   await page.waitForTimeout(800);

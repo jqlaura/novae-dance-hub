@@ -113,7 +113,9 @@ select:focus-visible, input[type=text]:focus-visible { outline: 2px solid var(--
 .choices .choice.wide { grid-column: 1 / -1; }
 .partstart { display: flex; flex-direction: column; gap: 6px; width: 100%; }
 .partstart .k { font-weight: 700; }
-.partstart input { max-width: 170px; font-variant-numeric: tabular-nums; }
+.timebox { display: flex; align-items: center; gap: 8px; }
+.timebox input { width: 64px; text-align: center; font-size: 20px; font-variant-numeric: tabular-nums; }
+.timebox span { font-size: 22px; font-weight: 700; }
 .matchpair .thumb { position: relative; aspect-ratio: 9 / 16; background: #000; border-radius: 12px; overflow: hidden; }
 /* shown on a black video when the phone won't play it by itself (iPhone Low Power Mode) */
 .tapshow { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; border: 0; padding: 12px; background: rgba(0, 0, 0, 0.55); color: #fff; font: inherit; font-weight: 700; font-size: 14px; text-align: center; cursor: pointer; }
@@ -291,8 +293,12 @@ canvas#rec { display: none; }
       <p class="small">Drag to put yourself on the center line. Pinch with two fingers to zoom. <button class="link" id="resetCrop" type="button">Reset</button></p>
       <p class="small">Video looks black? Turn off <b>Low Power Mode</b> (Settings → Battery), then tap the video.</p>
       <div class="partstart">
-        <label class="k" for="partStart">When does your part start in the song?</label>
-        <input id="partStart" type="text" inputmode="decimal" placeholder="e.g. 1:35" autocomplete="off" spellcheck="false" aria-describedby="partHint">
+        <label class="k" for="partMin">When does your part start in the song?</label>
+        <div class="timebox" id="partStart">
+          <input id="partMin" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="1" autocomplete="off" aria-label="Minutes" aria-describedby="partHint">
+          <span aria-hidden="true">:</span>
+          <input id="partSec" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="35" autocomplete="off" aria-label="Seconds" aria-describedby="partHint">
+        </div>
         <p class="small" id="partHint">Use the time Laura gave you. We match the music near that time.</p>
       </div>
       <button class="btn sm" id="videoReady" type="button" disabled>My video is ready!</button>
@@ -935,11 +941,17 @@ function setVideoReady(on) {
 // the button works once the sound is read and the mirror question is answered
 function updateReadyBtn() {
   const b = $('videoReady'), note = $('readyNote');
-  const hasTime = parseTime($('partStart').value) != null;
+  const hasTime = parseTime(partValue()) != null;
   const canGo = !!S.env.p && !S.ownError && S.mirrorAnswered && hasTime;
   b.disabled = !canGo || S.videoReady || S.exporting;
   note.hidden = canGo || S.ownError;
-  note.textContent = !S.env.p ? 'Getting your video ready…' : !S.mirrorAnswered ? 'Answer the mirror question first.' : 'Type when your part starts, like 1:35.';
+  note.textContent = !S.env.p ? 'Getting your video ready…' : !S.mirrorAnswered ? 'Answer the mirror question first.' : 'Type when your part starts: minutes, then seconds (like 1 : 35).';
+}
+// The two boxes (minutes, seconds) as "m:ss"; seconds must be filled in.
+function partValue() {
+  const m = $('partMin').value.trim(), sec = $('partSec').value.trim();
+  if (!sec || !/^\d{1,2}$/.test(sec) || (m && !/^\d{1,2}$/.test(m))) return '';
+  return (m || '0') + ':' + sec.padStart(2, '0');
 }
 // "1:35", "1.35", "135" -> 95 seconds; "45" -> 45 seconds. Anything else -> null.
 function parseTime(str) {
@@ -1934,6 +1946,12 @@ $('sampleOwn').addEventListener('click', async () => {
   try { const b = await (await fetch('samples/practice.mp4')).blob(); await loadOwn(new File([b], 'sample-practice.mp4', { type: 'video/mp4' })); }
   catch (e) { $('metaP').textContent = "Couldn't load the sample."; }
 });
+// after one minute digit, jump to the seconds box (songs are under 10 minutes)
+$('partMin').addEventListener('input', (e) => {
+  e.target.value = e.target.value.replace(/\D/g, '');
+  if (e.target.value.length >= 1) $('partSec').focus();
+});
+$('partSec').addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, ''); });
 $('partStart').addEventListener('input', () => {
   if (S.exporting) return;
   if (S.videoReady) { setVideoReady(false); S.aligned = false; S.partStart = null; invalidateResult(); refreshSteps(); }
@@ -1941,7 +1959,7 @@ $('partStart').addEventListener('input', () => {
 });
 $('videoReady').addEventListener('click', () => {
   if ($('videoReady').disabled) return;
-  S.partStart = parseTime($('partStart').value);
+  S.partStart = parseTime(partValue());
   setVideoReady(true); refreshSteps(); scrollToStep(6);
   if (S.env.p && S.env.f) runAlign();                       // matches, then makes the video
   else if (S.member) status('busy', `Getting ${S.member.name}'s video ready…`, 'Your comparison video starts by itself when it is ready.');
